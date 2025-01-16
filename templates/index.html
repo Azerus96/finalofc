@@ -28,6 +28,26 @@
             padding: 10px;
         }
 
+        .confirm-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         button {
             padding: 12px 24px;
             font-size: 16px;
@@ -64,6 +84,31 @@
             box-shadow: none;
         }
 
+        .discarded-cards {
+            position: fixed;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 90px;
+            min-height: 300px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 1000;
+        }
+
+        .discard-zone {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
         .table {
             display: grid;
             grid-template-rows: auto auto auto;
@@ -89,7 +134,8 @@
             background-color: rgba(255,255,255,0.1);
             flex-wrap: nowrap;
         }
-.card {
+
+        .card {
             width: calc(70px + 2vw);
             height: calc(100px + 2vw);
             min-width: 50px;
@@ -157,17 +203,14 @@
             opacity: 0.5;
             transform: scale(1.05);
         }
-
-        /* Menu styles */
         .menu-toggle {
             position: fixed;
             left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 10px;
             z-index: 1003;
             background: #4CAF50;
             border: none;
-            border-radius: 0 5px 5px 0;
+            border-radius: 5px;
             padding: 15px 10px;
             cursor: pointer;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
@@ -214,6 +257,8 @@
                 width: 98%;
                 padding: 10px;
                 gap: 10px;
+                transform: scale(0.9);
+                margin: 10px auto;
             }
 
             .row {
@@ -222,8 +267,8 @@
             }
 
             .card, .card-slot {
-                width: calc(45px + 2vw);
-                height: calc(65px + 2vw);
+                width: calc(40px + 2vw);
+                height: calc(60px + 2vw);
                 font-size: calc(14px + 1vw);
             }
 
@@ -276,9 +321,11 @@
 
     <div class="controls">
         <button onclick="startGame()">Начать</button>
-        <button onclick="drawCards()">OK</button>
         <button onclick="window.location.href='/training'">Тренировка</button>
     </div>
+
+    <div id="discarded-cards" class="discarded-cards"></div>
+
     <!-- Поле ИИ -->
     <div class="table">
         <div class="row top" id="ai-top-row"></div>
@@ -295,336 +342,314 @@
 
     <div id="hand"></div>
 
+    <button class="confirm-btn" onclick="drawCards()">+</button>
     <script>
-        let gameState = {{ game_state|tojson|safe }};
-        let isDragging = false;
-        let menuOpen = false;
+    let gameState = {{ game_state|tojson|safe }};
+    let isDragging = false;
+    let menuOpen = false;
+    let dealPhase = 0; // 0 - начальная раздача, 1-4 - последующие раздачи
+    let discardedCards = [];
 
-        function toggleMenu() {
-            const menu = document.querySelector('.menu-panel');
-            menuOpen = !menuOpen;
-            menu.classList.toggle('open');
-        }
+    function toggleMenu() {
+        const menu = document.querySelector('.menu-panel');
+        menuOpen = !menuOpen;
+        menu.classList.toggle('open');
+    }
 
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
             }
         }
+    }
 
-        function updateGameState() {
-            fetch('/update_state', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(gameState)
+    function updateGameState() {
+        fetch('/update_state', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ...gameState,
+                discardedCards: discardedCards
+            })
+        });
+    }
+
+    function createCard(card) {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.draggable = true;
+        cardElement.dataset.suit = card.suit;
+        cardElement.dataset.rank = card.rank;
+        cardElement.textContent = `${card.rank}${card.suit}`;
+        
+        cardElement.addEventListener('dragstart', (e) => {
+            isDragging = true;
+            e.target.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', JSON.stringify(card));
+        });
+
+        cardElement.addEventListener('dragend', (e) => {
+            isDragging = false;
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.card-slot').forEach(slot => {
+                slot.classList.remove('drag-over');
             });
+        });
+
+        // Добавляем возможность сброса по двойному клику
+        cardElement.addEventListener('dblclick', () => {
+            if (dealPhase > 0 && document.getElementById('hand').children.length > 1) {
+                handleCardDiscard(cardElement);
+            }
+        });
+        
+        return cardElement;
+    }
+
+    function handleCardDiscard(card) {
+        const discardedArea = document.getElementById('discarded-cards');
+        discardedCards.push({
+            rank: card.dataset.rank,
+            suit: card.dataset.suit
+        });
+        
+        const discardedCard = createCard({
+            rank: card.dataset.rank,
+            suit: card.dataset.suit
+        });
+        discardedCard.draggable = false;
+        discardedArea.appendChild(discardedCard);
+        
+        card.remove();
+        updateGameState();
+    }
+        function handleCardDrop(slot, card) {
+        if (slot.children.length > 0 && dealPhase > 0) {
+            // После начальной раздачи нельзя заменять уже размещенные карты
+            return;
         }
 
-        function createCard(card) {
-            const cardElement = document.createElement('div');
-            cardElement.className = 'card';
-            cardElement.draggable = true;
-            cardElement.dataset.suit = card.suit;
-            cardElement.dataset.rank = card.rank;
-            cardElement.textContent = `${card.rank}${card.suit}`;
-            
-            cardElement.addEventListener('dragstart', (e) => {
-                isDragging = true;
-                e.target.classList.add('dragging');
-                e.dataTransfer.setData('text/plain', JSON.stringify(card));
-            });
+        card.style = '';
+        card.className = 'card';
 
-            cardElement.addEventListener('dragend', (e) => {
-                isDragging = false;
-                e.target.classList.remove('dragging');
-                document.querySelectorAll('.card-slot').forEach(slot => {
-                    slot.classList.remove('drag-over');
+        if (slot.children.length > 0) {
+            const existingCard = slot.children[0];
+            const hand = document.getElementById('hand');
+            hand.appendChild(existingCard);
+        }
+        
+        slot.appendChild(card);
+        
+        requestAnimationFrame(() => {
+            card.style.display = 'flex';
+            card.style.visibility = 'visible';
+            card.style.opacity = '1';
+        });
+
+        realignCards();
+        updateTableState();
+        gameState.initial_cards_placed = checkInitialCardsPlaced();
+        updateGameState();
+    }
+
+    function createCardSlot() {
+        const slot = document.createElement('div');
+        slot.className = 'card-slot';
+        
+        slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (isDragging) {
+                slot.classList.add('drag-over');
+            }
+        });
+
+        slot.addEventListener('dragleave', (e) => {
+            slot.classList.remove('drag-over');
+        });
+        
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.classList.remove('drag-over');
+            const cardData = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const sourceElement = document.querySelector(
+                `[data-suit="${cardData.suit}"][data-rank="${cardData.rank}"]`
+            );
+            
+            if (sourceElement) {
+                handleCardDrop(slot, sourceElement);
+            }
+        });
+        
+        return slot;
+    }
+
+    function realignCards() {
+        ['top', 'middle', 'bottom'].forEach(row => {
+            const rowElement = document.getElementById(`${row}-row`);
+            const slots = Array.from(rowElement.getElementsByClassName('card-slot'));
+            const cards = slots.filter(slot => slot.children.length > 0)
+                             .map(slot => slot.children[0]);
+            
+            // Очищаем все слоты
+            slots.forEach(slot => slot.innerHTML = '');
+            
+            // Расставляем карты слева направо
+            cards.forEach((card, index) => {
+                slots[index].appendChild(card);
+            });
+        });
+    }
+        function setupTable() {
+        // Инициализация поля ИИ
+        const aiTopRow = document.getElementById('ai-top-row');
+        const aiMiddleRow = document.getElementById('ai-middle-row');
+        const aiBottomRow = document.getElementById('ai-bottom-row');
+
+        aiTopRow.innerHTML = '';
+        aiMiddleRow.innerHTML = '';
+        aiBottomRow.innerHTML = '';
+
+        for (let i = 0; i < 3; i++) aiTopRow.appendChild(createCardSlot());
+        for (let i = 0; i < 5; i++) aiMiddleRow.appendChild(createCardSlot());
+        for (let i = 0; i < 5; i++) aiBottomRow.appendChild(createCardSlot());
+
+        // Инициализация поля игрока
+        const topRow = document.getElementById('top-row');
+        const middleRow = document.getElementById('middle-row');
+        const bottomRow = document.getElementById('bottom-row');
+
+        topRow.innerHTML = '';
+        middleRow.innerHTML = '';
+        bottomRow.innerHTML = '';
+
+        for (let i = 0; i < 3; i++) topRow.appendChild(createCardSlot());
+        for (let i = 0; i < 5; i++) middleRow.appendChild(createCardSlot());
+        for (let i = 0; i < 5; i++) bottomRow.appendChild(createCardSlot());
+
+        // Очищаем сброшенные карты
+        document.getElementById('discarded-cards').innerHTML = '';
+        discardedCards = [];
+    }
+
+    function updateTableState() {
+        gameState.table = {
+            top: Array.from(document.querySelectorAll('#top-row .card-slot')).map(slot => 
+                slot.children[0] ? {
+                    rank: slot.children[0].dataset.rank,
+                    suit: slot.children[0].dataset.suit
+                } : ''),
+            middle: Array.from(document.querySelectorAll('#middle-row .card-slot')).map(slot =>
+                slot.children[0] ? {
+                    rank: slot.children[0].dataset.rank,
+                    suit: slot.children[0].dataset.suit
+                } : ''),
+            bottom: Array.from(document.querySelectorAll('#bottom-row .card-slot')).map(slot =>
+                slot.children[0] ? {
+                    rank: slot.children[0].dataset.rank,
+                    suit: slot.children[0].dataset.suit
+                } : '')
+        };
+    }
+
+    function checkInitialCardsPlaced() {
+        const hand = document.getElementById('hand');
+        return dealPhase === 0 && hand.children.length === 0;
+    }
+        async function startGame() {
+        dealPhase = 0;
+        const response = await fetch('/start');
+        const data = await response.json();
+        
+        gameState = {
+            hand: data.cards,
+            table: {
+                top: Array(3).fill(''),
+                middle: Array(5).fill(''),
+                bottom: Array(5).fill('')
+            },
+            used_cards: data.cards.map(card => `${card.rank}${card.suit}`),
+            draw_count: 0,
+            initial_cards_placed: false
+        };
+        
+        setupTable();
+            const hand = document.getElementById('hand');
+        hand.innerHTML = '';
+        data.cards.forEach(card => {
+            hand.appendChild(createCard(card));
+        });
+        
+        updateGameState();
+    }
+        async function drawCards() {
+        if (dealPhase === 0 && !gameState.initial_cards_placed) {
+            alert('Сначала распределите начальные 5 карт!');
+            return;
+        }
+
+        if (dealPhase >= 4) {
+            alert('Все карты розданы!');
+            return;
+        }
+
+        const hand = document.getElementById('hand');
+        if (hand.children.length > 0) {
+            alert('Необходимо разместить или сбросить все карты перед новой раздачей!');
+            return;
+        }
+            const response = await fetch('/draw');
+        const data = await response.json();
+        
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        
+        dealPhase++;
+            data.cards.forEach(card => {
+            hand.appendChild(createCard(card));
+        });
+        
+        gameState.draw_count++;
+        updateGameState();
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', () => {
+        setupTable();
+        
+        // Восстанавливаем состояние игры
+        if (gameState.table) {
+            Object.entries(gameState.table).forEach(([row, cards]) => {
+                cards.forEach((card, index) => {
+                    if (card) {
+                        const slot = document.querySelector(`#${row}-row .card-slot:nth-child(${index + 1})`);
+                        const cardElement = createCard(card);
+                        handleCardDrop(slot, cardElement);
+                    }
                 });
             });
-            
-            return cardElement;
         }
-
-        function handleCardDrop(slot, card) {
-            card.style = '';
-            card.className = 'card';
-
-            if (slot.children.length > 0) {
-                const existingCard = slot.children[0];
-                const hand = document.getElementById('hand');
-                hand.appendChild(existingCard);
-            }
-            
-            slot.appendChild(card);
-            
-            requestAnimationFrame(() => {
-                card.style.display = 'flex';
-                card.style.visibility = 'visible';
-                card.style.opacity = '1';
-            });
-
-            updateTableState();
-            gameState.initial_cards_placed = checkInitialCardsPlaced();
-            updateGameState();
-        }
-
-        function createCardSlot() {
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            
-            slot.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                if (isDragging) {
-                    slot.classList.add('drag-over');
-                }
-            });
-
-            slot.addEventListener('dragleave', (e) => {
-                slot.classList.remove('drag-over');
-            });
-            
-            slot.addEventListener('drop', (e) => {
-                e.preventDefault();
-                slot.classList.remove('drag-over');
-                const cardData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                const sourceElement = document.querySelector(
-                    `[data-suit="${cardData.suit}"][data-rank="${cardData.rank}"]`
-                );
-                
-                if (sourceElement) {
-                    handleCardDrop(slot, sourceElement);
-                }
-            });
-            
-            return slot;
-        }
-
-        function setupTable() {
-            // Инициализация поля ИИ
-            const aiTopRow = document.getElementById('ai-top-row');
-            const aiMiddleRow = document.getElementById('ai-middle-row');
-            const aiBottomRow = document.getElementById('ai-bottom-row');
-
-            aiTopRow.innerHTML = '';
-            aiMiddleRow.innerHTML = '';
-            aiBottomRow.innerHTML = '';
-
-            for (let i = 0; i < 3; i++) aiTopRow.appendChild(createCardSlot());
-            for (let i = 0; i < 5; i++) aiMiddleRow.appendChild(createCardSlot());
-            for (let i = 0; i < 5; i++) aiBottomRow.appendChild(createCardSlot());
-
-            // Инициализация поля игрока
-            const topRow = document.getElementById('top-row');
-            const middleRow = document.getElementById('middle-row');
-            const bottomRow = document.getElementById('bottom-row');
-
-            topRow.innerHTML = '';
-            middleRow.innerHTML = '';
-            bottomRow.innerHTML = '';
-
-            for (let i = 0; i < 3; i++) topRow.appendChild(createCardSlot());
-            for (let i = 0; i < 5; i++) middleRow.appendChild(createCardSlot());
-            for (let i = 0; i < 5; i++) bottomRow.appendChild(createCardSlot());
-        }
-        function updateTableState() {
-            gameState.table = {
-                top: Array.from(document.querySelectorAll('#top-row .card-slot')).map(slot => 
-                    slot.children[0] ? {
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : ''),
-                middle: Array.from(document.querySelectorAll('#middle-row .card-slot')).map(slot =>
-                    slot.children[0] ? {
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : ''),
-                bottom: Array.from(document.querySelectorAll('#bottom-row .card-slot')).map(slot =>
-                    slot.children[0] ? {
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : '')
-            };
-        }
-
-        function checkInitialCardsPlaced() {
+        
+        if (gameState.hand) {
             const hand = document.getElementById('hand');
-            return hand.children.length === 0;
-        }
-
-        async function startGame() {
-            const response = await fetch('/start');
-            const data = await response.json();
-            
-            gameState = {
-                hand: data.cards,
-                table: {
-                    top: Array(3).fill(''),
-                    middle: Array(5).fill(''),
-                    bottom: Array(5).fill('')
-                },
-                used_cards: data.cards.map(card => `${card.rank}${card.suit}`),
-                draw_count: 0,
-                initial_cards_placed: false
-            };
-            
-            setupTable();
-            const hand = document.getElementById('hand');
-            hand.innerHTML = '';
-            data.cards.forEach(card => {
+            gameState.hand.forEach(card => {
                 hand.appendChild(createCard(card));
             });
-            
-            updateGameState();
         }
 
-        async function drawCards() {
-            if (!gameState.initial_cards_placed) {
-                alert('Сначала распределите начальные карты!');
-                return;
-            }
-            
-            const response = await fetch('/draw');
-            const data = await response.json();
-            
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
-            
-            const hand = document.getElementById('hand');
-            data.cards.forEach(card => {
-                hand.appendChild(createCard(card));
-            });
-            
-            gameState.draw_count++;
-            updateGameState();
-        }
-
-        // Слайдер времени ИИ
+        // Настройка слайдера времени ИИ
         const aiTimeSlider = document.getElementById('aiTime');
         const aiTimeValue = document.getElementById('aiTimeValue');
         aiTimeSlider.addEventListener('input', (e) => {
             aiTimeValue.textContent = e.target.value;
         });
-
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', () => {
-            setupTable();
-            
-            // Восстанавливаем состояние игры
-            if (gameState.table) {
-                Object.entries(gameState.table).forEach(([row, cards]) => {
-                    cards.forEach((card, index) => {
-                        if (card) {
-                            const slot = document.querySelector(`#${row}-row .card-slot:nth-child(${index + 1})`);
-                            const cardElement = createCard(card);
-                            handleCardDrop(slot, cardElement);
-                        }
-                    });
-                });
-            }
-            
-            if (gameState.hand) {
-                const hand = document.getElementById('hand');
-                gameState.hand.forEach(card => {
-                    hand.appendChild(createCard(card));
-                });
-            }
-
-            // Настройка обработчиков для мобильных устройств
-            let touchCard = null;
-            let initialX = 0;
-            let initialY = 0;
-
-            document.addEventListener('touchstart', (e) => {
-                const card = e.target.closest('.card');
-                if (!card) return;
-                
-                touchCard = card;
-                const touch = e.touches[0];
-                const rect = card.getBoundingClientRect();
-                
-                initialX = touch.clientX - rect.left;
-                initialY = touch.clientY - rect.top;
-                
-                const clone = card.cloneNode(true);
-                clone.style.position = 'fixed';
-                clone.style.zIndex = '1000';
-                clone.style.opacity = '0.8';
-                clone.style.width = rect.width + 'px';
-                clone.style.height = rect.height + 'px';
-                clone.style.left = (rect.left) + 'px';
-                clone.style.top = (rect.top) + 'px';
-                clone.style.pointerEvents = 'none';
-                
-                document.body.appendChild(clone);
-                card.style.opacity = '0.3';
-                touchCard.clone = clone;
-                
-            }, { passive: false });
-
-            document.addEventListener('touchmove', (e) => {
-                if (!touchCard || !touchCard.clone) return;
-                
-                e.preventDefault();
-                const touch = e.touches[0];
-                
-                touchCard.clone.style.left = `${touch.clientX - initialX}px`;
-                touchCard.clone.style.top = `${touch.clientY - initialY}px`;
-                
-                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-                const slot = elementBelow?.closest('.card-slot');
-                
-                document.querySelectorAll('.card-slot').forEach(s => {
-                    s.classList.remove('drag-over');
-                });
-                
-                if (slot) {
-                    slot.classList.add('drag-over');
-                }
-            }, { passive: false });
-
-            document.addEventListener('touchend', (e) => {
-                if (!touchCard) return;
-                
-                const touch = e.changedTouches[0];
-                const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-                const slot = dropTarget?.closest('.card-slot');
-                
-                if (touchCard.clone) {
-                    touchCard.clone.remove();
-                    touchCard.clone = null;
-                }
-                
-                touchCard.style.opacity = '1';
-                
-                document.querySelectorAll('.card-slot').forEach(s => {
-                    s.classList.remove('drag-over');
-                });
-
-                if (slot) {
-                    handleCardDrop(slot, touchCard);
-                } else {
-                    const hand = document.getElementById('hand');
-                    hand.appendChild(touchCard);
-                }
-                
-                touchCard = null;
-                updateGameState();
-            }, { passive: false });
-
-            document.addEventListener('touchmove', (e) => {
-                if (touchCard) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
