@@ -50,6 +50,7 @@
             transform: translateY(1px);
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
+
         .fullscreen-btn {
             position: fixed;
             top: 10px;
@@ -77,7 +78,6 @@
             box-sizing: border-box;
             overflow: visible;
         }
-
         .row {
             display: flex;
             justify-content: center;
@@ -108,6 +108,7 @@
             flex-direction: column;
             gap: 5px;
         }
+
         .card-slot {
             width: calc(70px + 2vw);
             height: calc(100px + 2vw);
@@ -130,10 +131,27 @@
             transform: scale(1.05);
         }
 
+        #hand {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 70px;
+            background: #ffffff;
+            padding: 20px 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 1000;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            min-height: 120px;
+        }
+
         .card {
-            position: absolute;
-            width: 100%;
-            height: 100%;
+            position: relative;
+            width: 80px;
+            height: 120px;
             margin: 0;
             border-radius: 8px;
             background-color: white;
@@ -141,13 +159,19 @@
             justify-content: center;
             align-items: center;
             cursor: move;
-            font-size: calc(16px + 1vw);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             flex-shrink: 0;
             transition: transform 0.2s, box-shadow 0.2s;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
+            border: 1px solid #ddd;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         .card[data-suit="♥"], .card[data-suit="♦"] {
@@ -225,21 +249,6 @@
             cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        #hand {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 70px;
-            background: #f0f0f0;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            z-index: 1000;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
 
         .dragging {
             opacity: 0.5;
@@ -250,29 +259,38 @@
             .table {
                 width: 95%;
                 padding: 10px;
-                gap: 10px;
-                transform: scale(0.85);
-                margin: 10px auto;
+                gap: 8px;
+                transform: scale(0.9);
+                transform-origin: top center;
+                margin: -20px auto 0;
             }
 
             .row {
                 gap: 1.5%;
-                min-height: 80px;
+                min-height: 70px;
             }
 
-            .card, .card-slot {
-                width: calc(35px + 2vw);
-                height: calc(50px + 2vw);
-                font-size: calc(14px + 1vw);
+            .card-slot {
+                width: calc(45px + 1vw);
+                height: calc(65px + 1vw);
+                min-width: 45px;
+                min-height: 65px;
+            }
+
+            #hand {
+                padding: 15px 10px;
+                min-height: 90px;
+            }
+
+            .card {
+                width: 60px;
+                height: 90px;
+                font-size: 20px;
             }
 
             body {
                 padding: 10px;
                 padding-bottom: 120px;
-            }
-
-            #hand {
-                padding: 10px;
             }
 
             .menu-panel {
@@ -284,7 +302,8 @@
             }
 
             .discarded-cards {
-                width: 70px;
+                width: 60px;
+                left: 5px;
             }
         }
     </style>
@@ -325,6 +344,7 @@
         <button onclick="startGame()">Начать</button>
         <button onclick="window.location.href='/training'">Тренировка</button>
     </div>
+
     <!-- Поле ИИ -->
     <div class="table">
         <div class="row top" id="ai-top-row"></div>
@@ -358,7 +378,6 @@
         menu.classList.toggle('open');
     }
 
-    // Закрытие меню при клике вне его
     document.addEventListener('click', (e) => {
         const menu = document.querySelector('.menu-panel');
         const menuToggle = document.querySelector('.menu-toggle');
@@ -392,7 +411,8 @@
             })
         });
     }
-        function createCard(card) {
+
+    function createCard(card) {
         const cardElement = document.createElement('div');
         cardElement.className = 'card';
         cardElement.draggable = true;
@@ -414,7 +434,6 @@
                 slot.classList.remove('drag-over');
             });
         });
-
         // Mobile touch events
         let initialX;
         let initialY;
@@ -440,7 +459,8 @@
             
             document.body.appendChild(cardElement);
         });
-            cardElement.addEventListener('touchmove', (e) => {
+
+        cardElement.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             
@@ -503,6 +523,11 @@
         return cardElement;
     }
         function handleCardDiscard(card) {
+        if (dealPhase === 0) {
+            alert('Нельзя сбрасывать карты во время начальной раздачи');
+            return;
+        }
+        
         const discardedArea = document.getElementById('discarded-cards');
         discardedCards.push({
             rank: card.dataset.rank,
@@ -522,26 +547,23 @@
 
     function handleCardDrop(slot, card) {
         if (slot.children.length > 0 && dealPhase > 0) {
-            // После начальной раздачи нельзя заменять уже размещенные карты
             return;
         }
 
         card.style = '';
         card.className = 'card';
 
-        if (slot.children.length > 0) {
-            const existingCard = slot.children[0];
-            const hand = document.getElementById('hand');
-            hand.appendChild(existingCard);
+        if (card.parentElement) {
+            card.parentElement.removeChild(card);
         }
         
         slot.appendChild(card);
         
-        requestAnimationFrame(() => {
-            card.style.display = 'flex';
-            card.style.visibility = 'visible';
-            card.style.opacity = '1';
-        });
+        card.style.position = 'absolute';
+        card.style.top = '0';
+        card.style.left = '0';
+        card.style.width = '100%';
+        card.style.height = '100%';
 
         realignCards();
         updateTableState();
@@ -586,17 +608,13 @@
             const cards = slots.filter(slot => slot.children.length > 0)
                              .map(slot => slot.children[0]);
             
-            // Очищаем все слоты
             slots.forEach(slot => slot.innerHTML = '');
-            
-            // Расставляем карты слева направо
             cards.forEach((card, index) => {
                 slots[index].appendChild(card);
             });
         });
     }
-
-    function setupTable() {
+        function setupTable() {
         // Инициализация поля ИИ
         const aiTopRow = document.getElementById('ai-top-row');
         const aiMiddleRow = document.getElementById('ai-middle-row');
@@ -645,15 +663,20 @@
                 } : '')
         };
     }
-        function checkInitialCardsPlaced() {
+
+    function checkInitialCardsPlaced() {
         const hand = document.getElementById('hand');
         return dealPhase === 0 && hand.children.length === 0;
     }
-
-    async function startGame() {
+        async function startGame() {
         dealPhase = 0;
         const response = await fetch('/start');
         const data = await response.json();
+        
+        if (!data.cards || !Array.isArray(data.cards)) {
+            alert('Ошибка при раздаче карт');
+            return;
+        }
         
         gameState = {
             hand: data.cards,
@@ -670,9 +693,19 @@
         setupTable();
         const hand = document.getElementById('hand');
         hand.innerHTML = '';
-        data.cards.forEach(card => {
-            hand.appendChild(createCard(card));
-        });
+        
+        setTimeout(() => {
+            data.cards.forEach((card, index) => {
+                const cardElement = createCard(card);
+                cardElement.style.opacity = '0';
+                hand.appendChild(cardElement);
+                
+                setTimeout(() => {
+                    cardElement.style.opacity = '1';
+                    cardElement.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        }, 100);
         
         updateGameState();
     }
@@ -693,25 +726,33 @@
             alert('Необходимо разместить или сбросить все карты перед новой раздачей!');
             return;
         }
-        if (data.error) {
-            alert(data.error);
-            return;
+
+        try {
+            const response = await fetch('/draw_cards');
+            const data = await response.json();
+            
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            dealPhase++;
+            data.cards.forEach(card => {
+                hand.appendChild(createCard(card));
+            });
+            
+            gameState.draw_count++;
+            updateGameState();
+        } catch (error) {
+            alert('Ошибка при получении карт');
+            console.error(error);
         }
-        
-        dealPhase++;
-        data.cards.forEach(card => {
-            hand.appendChild(createCard(card));
-        });
-        
-        gameState.draw_count++;
-        updateGameState();
     }
 
     // Инициализация при загрузке страницы
     document.addEventListener('DOMContentLoaded', () => {
         setupTable();
         
-        // Восстанавливаем состояние игры
         if (gameState.table) {
             Object.entries(gameState.table).forEach(([row, cards]) => {
                 cards.forEach((card, index) => {
@@ -731,7 +772,6 @@
             });
         }
 
-        // Настройка слайдера времени ИИ
         const aiTimeSlider = document.getElementById('aiTime');
         const aiTimeValue = document.getElementById('aiTimeValue');
         aiTimeSlider.addEventListener('input', (e) => {
