@@ -12,7 +12,7 @@
             background-color: #f0f0f0;
             overflow-x: hidden;
             min-height: 100vh;
-            padding-bottom: 150px;
+            padding-bottom: 100px;
             box-sizing: border-box;
         }
 
@@ -50,7 +50,6 @@
             transform: translateY(1px);
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-
         .fullscreen-btn {
             position: fixed;
             top: 10px;
@@ -77,12 +76,14 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             box-sizing: border-box;
             overflow: visible;
+            transform: scale(0.95);
         }
+
         .row {
             display: flex;
             justify-content: center;
             gap: 2%;
-            min-height: 120px;
+            min-height: 100px;
             padding: 10px;
             border-radius: 5px;
             background-color: rgba(255,255,255,0.1);
@@ -102,7 +103,7 @@
             left: 10px;
             top: 50%;
             transform: translateY(-50%);
-            width: 90px;
+            width: 70px;
             min-height: auto;
             display: flex;
             flex-direction: column;
@@ -110,10 +111,10 @@
         }
 
         .card-slot {
-            width: calc(70px + 2vw);
-            height: calc(100px + 2vw);
-            min-width: 50px;
-            min-height: 70px;
+            width: calc(60px + 1vw);
+            height: calc(90px + 1vw);
+            min-width: 45px;
+            min-height: 65px;
             border: 2px dashed rgba(255,255,255,0.3);
             border-radius: 8px;
             flex-shrink: 0;
@@ -123,6 +124,7 @@
             align-items: center;
             position: relative;
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         .card-slot.drag-over {
@@ -130,43 +132,52 @@
             border-color: white;
             transform: scale(1.05);
         }
-
         #hand {
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 70px;
+            right: 60px;
             background: #ffffff;
-            padding: 20px 15px;
+            padding: 10px;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 5px;
             z-index: 1000;
             flex-wrap: nowrap;
             overflow-x: auto;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-            min-height: 120px;
+            min-height: 80px;
         }
 
         .card {
-            position: relative;
-            width: 80px;
-            height: 120px;
+            width: 60px;
+            height: 90px;
             margin: 0;
-            border-radius: 8px;
+            border-radius: 6px;
             background-color: white;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: move;
-            font-size: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 18px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             flex-shrink: 0;
             transition: transform 0.2s, box-shadow 0.2s;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none;
             border: 1px solid #ddd;
+        }
+
+        .card-slot .card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            transform: none;
+            transition: none;
         }
 
         .card:hover {
@@ -211,33 +222,14 @@
             left: 0;
         }
 
-        .menu-panel h3 {
-            margin-top: 0;
-        }
-
-        .setting-group {
-            margin-bottom: 20px;
-        }
-
-        .setting-group label {
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .setting-group select,
-        .setting-group input[type="range"] {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
         .confirm-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
+            bottom: 15px;
+            right: 5px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            font-size: 24px;
+            font-size: 20px;
             padding: 0;
             display: flex;
             align-items: center;
@@ -260,7 +252,7 @@
                 width: 95%;
                 padding: 10px;
                 gap: 8px;
-                transform: scale(0.9);
+                transform: scale(0.85);
                 transform-origin: top center;
                 margin: -20px auto 0;
             }
@@ -273,24 +265,23 @@
             .card-slot {
                 width: calc(45px + 1vw);
                 height: calc(65px + 1vw);
-                min-width: 45px;
-                min-height: 65px;
             }
 
             #hand {
-                padding: 15px 10px;
-                min-height: 90px;
+                right: 55px;
+                padding: 8px;
+                min-height: 70px;
             }
 
             .card {
-                width: 60px;
-                height: 90px;
-                font-size: 20px;
+                width: 50px;
+                height: 75px;
+                font-size: 16px;
             }
 
             body {
                 padding: 10px;
-                padding-bottom: 120px;
+                padding-bottom: 100px;
             }
 
             .menu-panel {
@@ -298,17 +289,21 @@
             }
             
             .confirm-btn {
-                bottom: 120px;
+                width: 40px;
+                height: 40px;
+                right: 5px;
+                bottom: 20px;
             }
 
             .discarded-cards {
-                width: 60px;
+                width: 50px;
                 left: 5px;
             }
         }
     </style>
 </head>
 <body>
+    <body>
     <button class="menu-toggle" onclick="toggleMenu()">
         <span class="material-icons">menu</span>
     </button>
@@ -378,6 +373,7 @@
         menu.classList.toggle('open');
     }
 
+    // Закрытие меню при клике вне его
     document.addEventListener('click', (e) => {
         const menu = document.querySelector('.menu-panel');
         const menuToggle = document.querySelector('.menu-toggle');
@@ -397,19 +393,6 @@
                 document.exitFullscreen();
             }
         }
-    }
-
-    function updateGameState() {
-        fetch('/update_state', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ...gameState,
-                discardedCards: discardedCards
-            })
-        });
     }
 
     function createCard(card) {
@@ -482,7 +465,6 @@
                 slot.classList.add('drag-over');
             }
         });
-
         cardElement.addEventListener('touchend', (e) => {
             const touch = e.changedTouches[0];
             const elementBelow = document.elementFromPoint(
@@ -522,7 +504,8 @@
         
         return cardElement;
     }
-        function handleCardDiscard(card) {
+
+    function handleCardDiscard(card) {
         if (dealPhase === 0) {
             alert('Нельзя сбрасывать карты во время начальной раздачи');
             return;
@@ -533,7 +516,6 @@
             rank: card.dataset.rank,
             suit: card.dataset.suit
         });
-        
         const discardedCard = createCard({
             rank: card.dataset.rank,
             suit: card.dataset.suit
@@ -550,20 +532,24 @@
             return;
         }
 
-        card.style = '';
+        // Удаляем все существующие стили
+        card.removeAttribute('style');
         card.className = 'card';
 
-        if (card.parentElement) {
-            card.parentElement.removeChild(card);
-        }
-        
+        // Добавляем карту в слот
+        slot.innerHTML = ''; // Очищаем слот перед добавлением
         slot.appendChild(card);
         
-        card.style.position = 'absolute';
-        card.style.top = '0';
-        card.style.left = '0';
-        card.style.width = '100%';
-        card.style.height = '100%';
+        // Устанавливаем стили для карты в слоте
+        requestAnimationFrame(() => {
+            card.style.position = 'absolute';
+            card.style.top = '0';
+            card.style.left = '0';
+            card.style.width = '100%';
+            card.style.height = '100%';
+            card.style.margin = '0';
+            card.style.transform = 'none';
+        });
 
         realignCards();
         updateTableState();
@@ -574,13 +560,13 @@
     function createCardSlot() {
         const slot = document.createElement('div');
         slot.className = 'card-slot';
-        
         slot.addEventListener('dragover', (e) => {
             e.preventDefault();
             if (isDragging) {
                 slot.classList.add('drag-over');
             }
         });
+
         slot.addEventListener('dragleave', (e) => {
             slot.classList.remove('drag-over');
         });
@@ -614,7 +600,8 @@
             });
         });
     }
-        function setupTable() {
+
+    function setupTable() {
         // Инициализация поля ИИ
         const aiTopRow = document.getElementById('ai-top-row');
         const aiMiddleRow = document.getElementById('ai-middle-row');
@@ -663,12 +650,12 @@
                 } : '')
         };
     }
-
-    function checkInitialCardsPlaced() {
+        function checkInitialCardsPlaced() {
         const hand = document.getElementById('hand');
         return dealPhase === 0 && hand.children.length === 0;
     }
-        async function startGame() {
+
+    async function startGame() {
         dealPhase = 0;
         const response = await fetch('/start');
         const data = await response.json();
@@ -774,9 +761,11 @@
 
         const aiTimeSlider = document.getElementById('aiTime');
         const aiTimeValue = document.getElementById('aiTimeValue');
-        aiTimeSlider.addEventListener('input', (e) => {
-            aiTimeValue.textContent = e.target.value;
-        });
+        if (aiTimeSlider && aiTimeValue) {
+            aiTimeSlider.addEventListener('input', (e) => {
+                aiTimeValue.textContent = e.target.value;
+            });
+        }
     });
 </script>
 </body>
