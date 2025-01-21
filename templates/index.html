@@ -13,7 +13,7 @@
             background-color: #f0f0f0;
             overflow-x: hidden;
             min-height: 100vh;
-            padding-bottom: 180px;
+            padding-bottom: 150px;
             box-sizing: border-box;
         }
 
@@ -78,98 +78,74 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             box-sizing: border-box;
             overflow: visible;
-            transform: scale(0.95);
         }
 
         .row {
             display: flex;
             justify-content: center;
-            gap: 2%;
+            gap: 10px;
             min-height: 100px;
             padding: 10px;
             border-radius: 5px;
             background-color: rgba(255,255,255,0.1);
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
         }
 
         #hand {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 130px;
             display: flex;
             justify-content: center;
-            gap: 0;
-            padding: 15px 0;
-            width: 90%;
-            max-width: 800px;
-            height: 130px;
-            overflow: visible;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            overflow-x: auto;
             z-index: 1000;
-            background: transparent;
-            box-shadow: none;
-        }
-
-        #hand .card {
-            width: 80px;
-            height: 112px;
-            margin: 0 -40px;
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            transform-origin: bottom center;
-            position: relative;
-            flex-shrink: 0;
-            will-change: transform;
-        }
-
-        #hand .card:hover {
-            transform: translateY(-25px) scale(1.15);
-            margin: 0 -20px;
-            z-index: 1001;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         }
 
         .card {
-            border-radius: 10px;
+            width: 70px;
+            height: 98px;
             background: white;
+            border-radius: 6px;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             font-size: 18px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             cursor: grab;
             user-select: none;
             touch-action: none;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             transition: transform 0.2s, box-shadow 0.2s;
-            animation: cardDeal 0.6s ease-out forwards;
-            padding: 8px;
-            border: 2px solid #fff;
-        }
-
-        @keyframes cardDeal {
-            0% {
-                opacity: 0;
-                transform: translateY(100px) rotate(-15deg);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) rotate(0);
-            }
+            flex-shrink: 0;
         }
 
         .card.dragging {
-            transform: scale(1.2) rotate(3deg) !important;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            z-index: 1002 !important;
-            transition: transform 0.1s, box-shadow 0.1s;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            z-index: 1001;
             cursor: grabbing;
         }
 
-        .game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            position: relative;
+        .card-slot {
+            width: 70px;
+            height: 98px;
+            border: 2px dashed rgba(0,0,0,0.2);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .card-slot.drag-over {
+            background: rgba(0,0,0,0.05);
+            border-color: #4CAF50;
         }
 
         .discarded-cards {
@@ -182,47 +158,6 @@
             display: flex;
             flex-direction: column;
             gap: 5px;
-        }
-
-        .card-slot {
-            position: relative;
-            overflow: hidden;
-            width: calc(60px + 1vw);
-            height: calc(90px + 1vw);
-            min-width: 45px;
-            min-height: 65px;
-            border: 2px dashed rgba(255,255,255,0.3);
-            border-radius: 8px;
-            flex-shrink: 0;
-            transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-sizing: border-box;
-            background-color: rgba(255,255,255,0.05);
-        }
-
-        .card-slot.drag-over {
-            background-color: rgba(255,255,255,0.2);
-            border-color: white;
-            transform: scale(1.05);
-        }
-
-        .card-in-slot {
-            width: 100% !important;
-            height: 100% !important;
-            transform: none !important;
-            transition: none !important;
-            z-index: 1;
-            pointer-events: auto;
-        }
-
-        .card[data-suit="♥"], .card[data-suit="♦"] {
-            color: #ff4444;
-        }
-
-        .card[data-suit="♣"], .card[data-suit="♠"] {
-            color: #2a2a2a;
         }
 
         .menu-toggle {
@@ -250,6 +185,7 @@
             padding: 20px;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
+
         .menu-panel.open {
             left: 0;
         }
@@ -294,56 +230,20 @@
         }
 
         @media (max-width: 768px) {
-            .table {
-                width: 95%;
-                padding: 10px;
-                gap: 8px;
-                transform: scale(0.85);
-                transform-origin: top center;
-                margin: -20px auto 0;
-            }
-
-            .row {
-                gap: 1.5%;
-                min-height: 70px;
+            .card {
+                width: 60px;
+                height: 84px;
+                font-size: 16px;
             }
 
             .card-slot {
-                width: calc(45px + 1vw);
-                height: calc(65px + 1vw);
-                min-width: 45px;
-                min-height: 65px;
+                width: 60px;
+                height: 84px;
             }
 
             #hand {
-                padding: 8px;
                 height: 110px;
-            }
-
-            #hand .card {
-                width: 70px;
-                height: 98px;
-                margin: 0 -35px;
-            }
-
-            body {
-                padding: 10px;
-                padding-bottom: 120px;
-            }
-
-            .menu-panel {
-                width: 250px;
-            }
-
-            .confirm-btn {
-                width: 40px;
-                height: 40px;
-                bottom: 20px;
-            }
-
-            .discarded-cards {
-                width: 60px;
-                left: 5px;
+                padding: 8px;
             }
         }
     </style>
@@ -384,14 +284,12 @@
         <button onclick="window.location.href='/training'">Тренировка</button>
     </div>
 
-    <!-- Поле ИИ -->
     <div class="table">
         <div class="row top" id="ai-top-row"></div>
         <div class="row middle" id="ai-middle-row"></div>
         <div class="row bottom" id="ai-bottom-row"></div>
     </div>
 
-    <!-- Контейнер для игрового поля и сброшенных карт -->
     <div class="game-container">
         <div id="discarded-cards" class="discarded-cards"></div>
         <div class="table">
@@ -407,11 +305,11 @@
 
     <script>
         let gameState = {};
-        let isDragging = false;
+        let dragCard = null;
+        let initialPosition = null;
+        let touchStartTime = 0;
         let menuOpen = false;
         let dealPhase = 0;
-        let draggedCardInfo = null;
-        let discardedCards = [];
 
         function toggleMenu() {
             const menu = document.querySelector('.menu-panel');
@@ -423,9 +321,7 @@
             const menu = document.querySelector('.menu-panel');
             const menuToggle = document.querySelector('.menu-toggle');
 
-            if (menuOpen &&
-                !menu.contains(e.target) &&
-                !menuToggle.contains(e.target)) {
+            if (menuOpen && !menu.contains(e.target) && !menuToggle.contains(e.target)) {
                 toggleMenu();
             }
         });
@@ -434,9 +330,7 @@
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+                document.exitFullscreen();
             }
         }
 
@@ -446,116 +340,97 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    ...gameState,
-                    discardedCards: discardedCards
-                })
+                body: JSON.stringify(gameState)
             });
         }
 
         function createCard(card) {
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
-            cardElement.innerHTML = `
-                <div class="card-rank">${card.rank}</div>
-                <div class="card-suit">${card.suit}</div>
-            `;
+            cardElement.textContent = `${card.rank}${card.suit}`;
             cardElement.dataset.id = card.id;
-            cardElement.dataset.suit = card.suit;
-            cardElement.dataset.rank = card.rank;
             cardElement.draggable = true;
 
             cardElement.addEventListener('dragstart', e => {
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', card.id);
+                dragCard = e.target;
+                initialPosition = {
+                    x: e.clientX - e.target.offsetLeft,
+                    y: e.clientY - e.target.offsetTop
+                };
                 e.target.classList.add('dragging');
-                e.target.style.opacity = '0.7';
             });
 
             cardElement.addEventListener('dragend', e => {
                 e.target.classList.remove('dragging');
-                e.target.style.opacity = '1';
+                dragCard = null;
+                initialPosition = null;
             });
 
-            let touchOffset = { x: 0, y: 0 };
-            
             cardElement.addEventListener('touchstart', e => {
                 e.preventDefault();
+                touchStartTime = Date.now();
                 const touch = e.touches[0];
-                const rect = cardElement.getBoundingClientRect();
-                touchOffset = {
-                    x: touch.clientX - rect.left,
-                    y: touch.clientY - rect.top
+                dragCard = e.target;
+                initialPosition = {
+                    x: touch.clientX - e.target.offsetLeft,
+                    y: touch.clientY - e.target.offsetTop
                 };
-                cardElement.classList.add('dragging');
+                dragCard.classList.add('dragging');
+                document.body.style.overflow = 'hidden';
             });
 
             cardElement.addEventListener('touchmove', e => {
                 e.preventDefault();
-                if (!cardElement.classList.contains('dragging')) return;
+                if (!dragCard) return;
                 
                 const touch = e.touches[0];
-                cardElement.style.position = 'fixed';
-                cardElement.style.left = `${touch.clientX - touchOffset.x}px`;
-                cardElement.style.top = `${touch.clientY - touchOffset.y}px`;
-                cardElement.style.transform = 'rotate(5deg) scale(1.1)';
+                const x = touch.clientX - initialPosition.x;
+                const y = touch.clientY - initialPosition.y;
+                
+                dragCard.style.position = 'fixed';
+                dragCard.style.left = `${x}px`;
+                dragCard.style.top = `${y}px`;
+                dragCard.style.transform = 'scale(1.1)';
             });
 
             cardElement.addEventListener('touchend', e => {
-                cardElement.classList.remove('dragging');
-                cardElement.style.position = '';
-                cardElement.style.left = '';
-                cardElement.style.top = '';
-                cardElement.style.transform = '';
+                if (!dragCard) return;
                 
-                const dropTarget = document.elementFromPoint(
-                    e.changedTouches[0].clientX,
-                    e.changedTouches[0].clientY
-                );
+                const touch = e.changedTouches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                handleDrop(target);
                 
-                if (dropTarget?.closest('.card-slot')) {
-                    handleCardDrop(dropTarget.closest('.card-slot'), cardElement);
-                }
-            });
-
-            cardElement.addEventListener('dblclick', () => {
-                if (dealPhase > 0 && document.getElementById('hand').children.length > 1) {
-                    handleCardDiscard(cardElement);
-                }
+                dragCard.classList.remove('dragging');
+                dragCard.style.position = '';
+                dragCard.style.left = '';
+                dragCard.style.top = '';
+                dragCard.style.transform = '';
+                dragCard = null;
+                document.body.style.overflow = '';
             });
 
             return cardElement;
         }
 
-        function handleCardDrop(slot, originalCard) {
-            if (!slot || !originalCard) return;
+        function handleDrop(target) {
+            if (!target) return;
 
-            const clonedCard = originalCard.cloneNode(true);
-            clonedCard.classList.remove('dragging');
-            clonedCard.style.transform = '';
-            clonedCard.draggable = false;
-            
-            originalCard.style.visibility = 'hidden';
-            
-            slot.innerHTML = '';
-            slot.appendChild(clonedCard);
-            clonedCard.classList.add('card-in-slot');
+            const slot = target.closest('.card-slot');
+            const hand = target.closest('#hand');
+            const currentSlot = dragCard?.closest('.card-slot');
+
+            if (slot) {
+                if (slot.children.length > 0) return;
+                slot.appendChild(dragCard);
+            } else if (hand) {
+                hand.appendChild(dragCard);
+            } else if (currentSlot) {
+                currentSlot.removeChild(dragCard);
+                document.getElementById('hand').appendChild(dragCard);
+            }
             
             updateTableState();
-            gameState.initial_cards_placed = checkInitialCardsPlaced();
             updateGameState();
-        }
-
-        function handleCardDiscard(card) {
-            const discardedArea = document.getElementById('discarded-cards');
-            const clone = card.cloneNode(true);
-            
-            discardedArea.appendChild(clone);
-            clone.classList.add('discarded');
-            clone.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
-            
-            card.style.visibility = 'visible';
-            card.style.transform = '';
         }
 
         function createCardSlot() {
@@ -564,25 +439,35 @@
 
             slot.addEventListener('dragover', e => {
                 e.preventDefault();
-                if (isDragging) {
-                    e.target.classList.add('drag-over');
+                if (dragCard && !slot.children.length) {
+                    slot.classList.add('drag-over');
                 }
             });
 
             slot.addEventListener('dragleave', e => {
-                e.target.classList.remove('drag-over');
+                slot.classList.remove('drag-over');
             });
 
             slot.addEventListener('drop', e => {
                 e.preventDefault();
-                e.target.classList.remove('drag-over');
-                const cardId = e.dataTransfer.getData('text/plain');
-                const card = document.querySelector(`[data-id="${cardId}"]`);
-                handleCardDrop(e.target, card);
+                slot.classList.remove('drag-over');
+                handleDrop(slot);
             });
 
             return slot;
         }
+
+        document.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (!dragCard) return;
+            
+            const x = e.clientX - initialPosition.x;
+            const y = e.clientY - initialPosition.y;
+            
+            dragCard.style.position = 'fixed';
+            dragCard.style.left = `${x}px`;
+            dragCard.style.top = `${y}px`;
+        });
 
         function setupTable() {
             const rows = [
@@ -596,69 +481,30 @@
 
             rows.forEach(row => {
                 row.innerHTML = '';
-                const isAiRow = row.id.startsWith('ai');
-                const rowType = row.className.split(' ')[1];
-
-                let slotCount;
-                switch(rowType) {
-                    case 'top': slotCount = 3; break;
-                    case 'middle': 
-                    case 'bottom': 
-                        slotCount = 5; break;
-                    default: slotCount = 0;
-                }
-
+                const slotCount = row.classList.contains('top') ? 3 : 5;
                 for (let i = 0; i < slotCount; i++) {
-                    const slot = createCardSlot();
-                    if (isAiRow) {
-                        slot.classList.add('ai-slot');
-                        slot.style.opacity = '0.5';
-                    }
-                    row.appendChild(slot);
+                    row.appendChild(createCardSlot());
                 }
             });
 
             document.getElementById('discarded-cards').innerHTML = '';
-            discardedCards = [];
         }
 
         function updateTableState() {
             gameState.table = {
-                top: Array.from(document.querySelectorAll('#top-row .card-slot')).map(slot =>
-                    slot.children[0] ? {
-                        id: slot.children[0].dataset.id,
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : null),
-                middle: Array.from(document.querySelectorAll('#middle-row .card-slot')).map(slot =>
-                    slot.children[0] ? {
-                        id: slot.children[0].dataset.id,
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : null),
-                bottom: Array.from(document.querySelectorAll('#bottom-row .card-slot')).map(slot =>
-                    slot.children[0] ? {
-                        id: slot.children[0].dataset.id,
-                        rank: slot.children[0].dataset.rank,
-                        suit: slot.children[0].dataset.suit
-                    } : null)
+                top: Array.from(document.querySelectorAll('#top-row .card-slot')).map(slot => 
+                    slot.children[0]?.dataset.id || null),
+                middle: Array.from(document.querySelectorAll('#middle-row .card-slot')).map(slot => 
+                    slot.children[0]?.dataset.id || null),
+                bottom: Array.from(document.querySelectorAll('#bottom-row .card-slot')).map(slot => 
+                    slot.children[0]?.dataset.id || null)
             };
-        }
-
-        function checkInitialCardsPlaced() {
-            const hand = document.getElementById('hand');
-            return dealPhase === 0 && hand.children.length === 0;
         }
 
         async function startGame() {
             dealPhase = 0;
             const response = await fetch('/start');
             const data = await response.json();
-
-            if (!data.cards || !Array.isArray(data.cards)) {
-                alert('Ошибка при раздаче карт');
-                return;
-            }
 
             gameState = {
                 hand: data.cards,
@@ -668,85 +514,45 @@
                     bottom: Array(5).fill(null)
                 },
                 used_cards: data.cards.map(card => card.id),
-                draw_count: 0,
-                initial_cards_placed: false
+                draw_count: 0
             };
 
             setupTable();
             const hand = document.getElementById('hand');
             hand.innerHTML = '';
-            
-            data.cards.forEach((card, index) => {
-                const cardElement = createCard(card);
-                cardElement.style.transform = `rotate(${index % 2 ? 5 : -5}deg)`;
-                hand.appendChild(cardElement);
-                
-                setTimeout(() => {
-                    cardElement.style.transform = '';
-                }, index * 100);
-            });
-
+            data.cards.forEach(card => hand.appendChild(createCard(card)));
             updateGameState();
         }
 
         async function drawCards() {
-            if (dealPhase === 0 && !gameState.initial_cards_placed) {
-                alert('Сначала распределите начальные 5 карт!');
-                return;
-            }
-
             if (dealPhase >= 4) {
                 alert('Все карты розданы!');
-                return;
-            }
-
-            const hand = document.getElementById('hand');
-            if (hand.children.length > 0) {
-                alert('Необходимо разместить или сбросить все карты перед новой раздачей!');
                 return;
             }
 
             try {
                 const response = await fetch('/draw_cards');
                 const data = await response.json();
-
+                
                 dealPhase++;
-                data.cards.forEach(card => {
-                    const cardElement = createCard(card);
-                    hand.appendChild(cardElement);
-                });
-
+                const hand = document.getElementById('hand');
+                data.cards.forEach(card => hand.appendChild(createCard(card)));
+                
                 gameState.draw_count++;
                 updateGameState();
             } catch (error) {
-                console.error('Ошибка при получении карт:', error);
-                alert('Произошла ошибка при получении карт. Пожалуйста, попробуйте еще раз.');
+                console.error('Ошибка:', error);
+                alert('Ошибка при получении карт');
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             setupTable();
-
+            
             const aiTimeSlider = document.getElementById('aiTime');
             const aiTimeValue = document.getElementById('aiTimeValue');
-            aiTimeSlider.addEventListener('input', (e) => {
+            aiTimeSlider.addEventListener('input', e => {
                 aiTimeValue.textContent = e.target.value;
-            });
-
-            const handElement = document.getElementById('hand');
-            handElement.addEventListener('dragover', e => {
-                e.preventDefault();
-                if (isDragging) {
-                    e.target.classList.add('drag-over');
-                }
-            });
-            
-            handElement.addEventListener('drop', e => {
-                e.preventDefault();
-                e.target.classList.remove('drag-over');
-                const cardId = e.dataTransfer.getData('text/plain');
-                const card = document.querySelector(`[data-id="${cardId}"]`);
-                card.style.visibility = 'visible';
             });
         });
     </script>
