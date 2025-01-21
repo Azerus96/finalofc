@@ -88,6 +88,8 @@ def update_state():
 def ai_move():
     global cfr_agent
     game_state_data = request.get_json()
+    print("Received game_state_data:", game_state_data)  # Логирование полученных данных
+
     num_cards = len(game_state_data['selected_cards'])
     ai_settings = game_state_data['ai_settings']
 
@@ -97,7 +99,15 @@ def ai_move():
     for line in ['top', 'middle', 'bottom']:
         for card_data in game_state_data['board'].get(line, []):
             board.place_card(line, ai_engine.Card(card_data['rank'], card_data['suit']))
-    discarded_cards = [ai_engine.Card(card['rank'], card.suit) for card in game_state_data['discarded_cards']]
+    try:
+        discarded_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data['discarded_cards']]
+    except KeyError as e:
+        print(f"KeyError: {e} not found in game_state_data['discarded_cards']")
+        print("game_state_data['discarded_cards']:", game_state_data['discarded_cards'])
+        return jsonify({'error': f"KeyError: {e} not found in discarded_cards"}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return jsonify({'error': str(e)}), 500
 
     # Create GameState object
     game_state = ai_engine.GameState(selected_cards=selected_cards, board=board, discarded_cards=discarded_cards, ai_settings=ai_settings)
