@@ -6,7 +6,6 @@
     <title>Card Game</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        /* Основные стили */
         body {
             margin: 0;
             padding: 20px;
@@ -14,7 +13,7 @@
             background-color: #f0f0f0;
             overflow-x: hidden;
             min-height: 100vh;
-            padding-bottom: 150px;
+            padding-bottom: 100px;
             box-sizing: border-box;
         }
 
@@ -42,6 +41,30 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #333;
+            cursor: pointer;
+            z-index: 1002;
+            padding: 8px;
+            box-shadow: none;
+        }
+
         .table {
             display: grid;
             grid-template-rows: auto auto auto;
@@ -54,123 +77,313 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             box-sizing: border-box;
+            overflow: visible;
+            transform: scale(0.95);
         }
 
         .row {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 2%;
             min-height: 100px;
             padding: 10px;
             border-radius: 5px;
             background-color: rgba(255,255,255,0.1);
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         #hand {
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
-            height: 130px;
+            right: 60px;
+            background: #ffffff;
             display: flex;
-            align-items: center;
+            flex-direction: row;
+            justify-content: flex-start;
             gap: 10px;
+            min-height: 100px;
             padding: 10px;
             overflow-x: auto;
+            white-space: nowrap;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
             z-index: 1000;
-            background: rgba(255,255,255,0.9);
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         }
 
+        #hand .card {
+            position: relative !important;
+            margin-right: 5px;
+            flex: 0 0 auto;
+            /* Изменения для адаптивного размера карт в руке */
+            width: 5vw; /* Ширина карты как процент от ширины viewport */
+            max-width: 60px; /* Максимальная ширина */
+            height: auto;
+        }
         .card {
-            width: 70px;
-            height: 98px;
-            background: white;
-            border-radius: 6px;
+            /* Изменения для адаптивного размера карт */
+            width: 5vw; /* Ширина карты как процент от ширины viewport */
+            max-width: 60px; /* Максимальная ширина */
+            height: 7.5vw; /* Высота, сохраняющая пропорции */
+            max-height: 90px;
+            min-width: 40px;
+            min-height: 60px;
+            margin: 0;
+            border-radius: 8px;
+            background-color: white;
             display: flex;
             justify-content: center;
             align-items: center;
+            cursor: move;
             font-size: 18px;
-            cursor: grab;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            transition: all 0.2s ease;
             user-select: none;
+            -webkit-user-select: none;
             touch-action: none;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            flex-shrink: 0;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
 
+        /* Анимация перемещения */
         .card.dragging {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-            z-index: 1001;
-            cursor: grabbing;
+            transition: transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.2s ease-out;
+            transform: translateY(-10px) scale(1.1);
+            opacity: 0.8;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            position: relative;
+        }
+
+        .discarded-cards {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 70px;
+            min-height: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
         .card-slot {
-            width: 70px;
-            height: 98px;
-            border: 2px dashed rgba(0,0,0,0.2);
-            border-radius: 6px;
-            background: rgba(255,255,255,0.1);
-            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            width: calc(60px + 1vw);
+            height: calc(90px + 1vw);
+            min-width: 45px;
+            min-height: 65px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
             flex-shrink: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            background-color: rgba(255,255,255,0.05);
         }
 
         .card-slot.drag-over {
-            background: rgba(0,0,0,0.05);
-            border-color: #4CAF50;
+            background-color: rgba(255,255,255,0.2);
+            border-color: white;
+            transform: scale(1.05);
         }
 
-        /* Мобильная адаптация */
+        .card-in-slot {
+            width: 100% !important;
+            height: 100% !important;
+            transform: none !important;
+            transition: none !important;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        .card[data-suit="♥"], .card[data-suit="♦"] {
+            color: #e44145;
+        }
+
+        .card[data-suit="♣"], .card[data-suit="♠"] {
+            color: #2d2d2d;
+        }
+
+        .menu-toggle {
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            z-index: 1003;
+            background: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            padding: 15px 10px;
+            cursor: pointer;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .menu-panel {
+            position: fixed;
+            left: -300px;
+            top: 0;
+            bottom: 0;
+            width: 300px;
+            background: white;
+            z-index: 1002;
+            transition: left 0.3s ease;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .menu-panel.open {
+            left: 0;
+        }
+
+        .menu-panel h3 {
+            margin-top: 0;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .setting-group select,
+        .setting-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .confirm-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 5px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 20px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         @media (max-width: 768px) {
             .table {
-                width: 100%;
-                padding: 5px;
+                width: 95%;
+                padding: 10px;
+                gap: 8px;
+                transform: scale(0.85);
+                transform-origin: top center;
+                margin: -20px auto 0;
             }
 
             .row {
-                gap: 5px;
-                min-height: 80px;
-                padding: 5px;
+                gap: 1.5%;
+                min-height: 70px;
+            }
+
+            .card-slot {
+                width: calc(45px + 1vw);
+                height: calc(65px + 1vw);
+                min-width: 45px;
+                min-height: 65px;
             }
 
             #hand {
-                height: 100px;
-                padding: 5px;
+                padding: 8px;
+                min-height: 70px;
+                right: 55px;
             }
 
-            .card, .card-slot {
-                width: 55px;
-                height: 77px;
-                font-size: 14px;
+            .card {
+                width: 50px;
+                height: 75px;
+                font-size: 16px;
+            }
+
+            body {
+                padding: 10px;
+                padding-bottom: 120px;
+            }
+
+            .menu-panel {
+                width: 250px;
             }
 
             .confirm-btn {
-                bottom: 10px;
-                right: 10px;
                 width: 40px;
                 height: 40px;
-                font-size: 18px;
+                bottom: 20px;
+            }
+
+            .discarded-cards {
+                width: 60px;
+                left: 5px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- HTML структура -->
+    <button class="menu-toggle" onclick="toggleMenu()">
+        <span class="material-icons">menu</span>
+    </button>
+
+    <div class="menu-panel">
+        <h3>Настройки</h3>
+        <div class="setting-group">
+            <label>Тип фантазии:</label>
+            <select id="fantasyType">
+                <option value="normal">Обычная</option>
+                <option value="progressive">Прогрессивная</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label>Время на ход ИИ (сек):</label>
+            <input type="range" id="aiTime" min="1" max="60" value="5">
+            <span id="aiTimeValue">5</span>
+        </div>
+        <div class="setting-group">
+            <label>Тип ИИ:</label>
+            <select id="aiType">
+                <option value="random">Случайный</option>
+                <option value="mccfr">MCCFR</option>
+            </select>
+        </div>
+    </div>
+    <button class="fullscreen-btn" onclick="toggleFullScreen()">
+        <span class="material-icons">fullscreen</span>
+    </button>
+
     <div class="controls">
         <button onclick="startGame()">Начать</button>
         <button onclick="window.location.href='/training'">Тренировка</button>
     </div>
 
+    <!-- Поле ИИ -->
     <div class="table">
         <div class="row top" id="ai-top-row"></div>
         <div class="row middle" id="ai-middle-row"></div>
         <div class="row bottom" id="ai-bottom-row"></div>
     </div>
 
+    <!-- Контейнер для игрового поля и сброшенных карт -->
     <div class="game-container">
+        <div id="discarded-cards" class="discarded-cards"></div>
         <div class="table">
             <div class="row top" id="top-row"></div>
             <div class="row middle" id="middle-row"></div>
@@ -180,153 +393,439 @@
 
     <div id="hand"></div>
 
-    <script>
-        let dragCard = null;
-        let touchOffset = { x: 0, y: 0 };
+    <button class="confirm-btn" onclick="drawCards()">+</button>
 
+    <script>
+        let gameState = {};
+        let isDragging = false;
+        let menuOpen = false;
+        let dealPhase = 0;
+        let draggedCardInfo = null;
+        let discardedCards = [];
+
+        function toggleMenu() {
+            const menu = document.querySelector('.menu-panel');
+            menuOpen = !menuOpen;
+            menu.classList.toggle('open');
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.querySelector('.menu-panel');
+            const menuToggle = document.querySelector('.menu-toggle');
+
+            if (menuOpen &&
+                !menu.contains(e.target) &&
+                !menuToggle.contains(e.target)) {
+                toggleMenu();
+            }
+        });
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function updateGameState() {
+            fetch('/update_state', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...gameState,
+                    discardedCards: discardedCards
+                })
+            });
+        }
         function createCard(card) {
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
-            cardElement.textContent = `${card.rank}${card.suit}`;
-            cardElement.dataset.id = card.id;
             cardElement.draggable = true;
+            cardElement.dataset.suit = card.suit;
+            cardElement.dataset.rank = card.rank;
+            cardElement.textContent = `${card.rank}${card.suit}`;
 
-            // Обработчики для десктопа
-            cardElement.addEventListener('dragstart', e => {
-                dragCard = e.target;
-                dragCard.classList.add('dragging');
-            });
+            cardElement.addEventListener('dragstart', handleDragStart);
+            cardElement.addEventListener('dragend', handleDragEnd);
 
-            cardElement.addEventListener('dragend', () => {
-                dragCard.classList.remove('dragging');
-                dragCard = null;
-            });
+            // Mobile touch events
+            cardElement.addEventListener('touchstart', handleTouchStart);
+            cardElement.addEventListener('touchmove', handleTouchMove);
+            cardElement.addEventListener('touchend', handleTouchEnd);
+            cardElement.addEventListener('touchcancel', handleTouchEnd);
 
-            // Обработчики для мобильных
-            cardElement.addEventListener('touchstart', e => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const rect = cardElement.getBoundingClientRect();
-                
-                touchOffset = {
-                    x: touch.clientX - rect.left,
-                    y: touch.clientY - rect.top
-                };
-                
-                dragCard = cardElement;
-                dragCard.classList.add('dragging');
-                dragCard.style.position = 'fixed';
-                dragCard.style.left = `${rect.left}px`;
-                dragCard.style.top = `${rect.top}px`;
-                dragCard.style.width = `${rect.width}px`;
-                dragCard.style.height = `${rect.height}px`;
-            });
-
-            cardElement.addEventListener('touchmove', e => {
-                e.preventDefault();
-                if (!dragCard) return;
-                
-                const touch = e.touches[0];
-                const x = touch.clientX - touchOffset.x;
-                const y = touch.clientY - touchOffset.y;
-                
-                dragCard.style.transform = `translate(${x}px, ${y}px) scale(1.1)`;
-            });
-
-            cardElement.addEventListener('touchend', e => {
-                if (!dragCard) return;
-                
-                const touch = e.changedTouches[0];
-                const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                handleDrop(target);
-                
-                dragCard.classList.remove('dragging');
-                dragCard.style.position = '';
-                dragCard.style.transform = '';
-                dragCard = null;
+            cardElement.addEventListener('dblclick', () => {
+                if (dealPhase > 0 && document.getElementById('hand').children.length > 1) {
+                    handleCardDiscard(cardElement);
+                }
             });
 
             return cardElement;
         }
 
-        function handleDrop(target) {
-            if (!target) return;
+        function handleDragStart(e) {
+            isDragging = true;
+            const card = e.target;
+            card.classList.add('dragging');
+            draggedCardInfo = {
+                rank: card.dataset.rank,
+                suit: card.dataset.suit,
+                source: card.parentNode.id,
+                originalX: card.style.left, // Сохраняем начальные координаты
+                originalY: card.style.top
+            };
+            e.dataTransfer.setData('text/plain', JSON.stringify(draggedCardInfo));
+            e.dataTransfer.effectAllowed = 'move';
 
-            const slot = target.closest('.card-slot');
-            const hand = target.closest('#hand');
-            const currentSlot = dragCard?.closest('.card-slot');
+            // Задержка для предотвращения немедленного срабатывания dragend
+            setTimeout(() => {
+                if (card.parentNode) {
+                    card.style.opacity = '0.8';
+                }
+            }, 0);
+        }
 
-            if (slot && !slot.children.length) {
-                if (currentSlot) currentSlot.removeChild(dragCard);
-                slot.appendChild(dragCard);
-            } else if (hand) {
-                if (currentSlot) currentSlot.removeChild(dragCard);
-                hand.appendChild(dragCard);
+        function handleDragEnd(e) {
+            isDragging = false;
+            const card = e.target;
+            card.classList.remove('dragging');
+            card.style.opacity = '';
+
+            // Возвращаем карту на исходную позицию, если она не была перемещена в слот
+            if (draggedCardInfo && draggedCardInfo.source === 'hand' && card.parentNode.id === 'hand') {
+                card.style.left = draggedCardInfo.originalX;
+                card.style.top = draggedCardInfo.originalY;
+            }
+
+            draggedCardInfo = null;
+            document.querySelectorAll('.card-slot').forEach(slot => {
+                slot.classList.remove('drag-over');
+            });
+            document.getElementById('hand').classList.remove('drag-over');
+        }
+
+        function handleTouchStart(e) {
+            const card = e.target;
+            if (!card.classList.contains('card')) return;
+
+            isDragging = true;
+            const touch = e.touches[0];
+            const offsetX = touch.clientX - card.getBoundingClientRect().left;
+            const offsetY = touch.clientY - card.getBoundingClientRect().top;
+
+            draggedCardInfo = {
+                rank: card.dataset.rank,
+                suit: card.dataset.suit,
+                source: card.parentNode.id,
+                offsetX: offsetX,
+                offsetY: offsetY,
+                originalX: card.style.left, // Сохраняем начальные координаты
+                originalY: card.style.top
+            };
+            card.classList.add('dragging');
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!isDragging || !draggedCardInfo) return;
+
+            const touch = e.touches[0];
+            const cardElement = document.querySelector(`.card.dragging`);
+
+            if (cardElement) {
+                const x = touch.clientX - draggedCardInfo.offsetX;
+                const y = touch.clientY - draggedCardInfo.offsetY;
+
+                cardElement.style.position = 'absolute';
+                cardElement.style.left = `${x}px`;
+                cardElement.style.top = `${y}px`;
+                cardElement.style.zIndex = '1000';
+
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                document.querySelectorAll('.card-slot').forEach(slot => slot.classList.remove('drag-over'));
+                document.getElementById('hand').classList.remove('drag-over');
+
+                if (target && target.classList.contains('card-slot')) {
+                    target.classList.add('drag-over');
+                } else if (target && target.id === 'hand') {
+                    target.classList.add('drag-over');
+                }
             }
         }
 
+        function handleTouchEnd(e) {
+            if (!isDragging || !draggedCardInfo) return;
+
+            const touch = e.changedTouches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const cardElement = document.querySelector(`.card.dragging`);
+
+            if (target && target.classList.contains('card-slot')) {
+                handleCardDrop(target, cardElement);
+            } else if (target && target.id === 'hand') {
+                moveCardToHand(cardElement);
+            } else if (cardElement) {
+                // Возвращаем карту на исходную позицию, если она не была перемещена
+                cardElement.style.left = draggedCardInfo.originalX;
+                cardElement.style.top = draggedCardInfo.originalY;
+            }
+
+            if (cardElement) {
+                cardElement.classList.remove('dragging');
+            }
+            isDragging = false;
+            draggedCardInfo = null;
+        }
+
+        function handleCardDrop(slot, card) {
+            if (!slot || !card) return;
+
+            // Проверяем, не является ли слот уже занятым (только в начале раздачи)
+            if (slot.children.length > 0 && dealPhase === 0) {
+                return;
+            }
+
+            // Помещаем карту в новый слот
+            slot.appendChild(card);
+            card.className = 'card card-in-slot';
+            card.style.position = '';
+            card.style.left = '';
+            card.style.top = '';
+            card.style.transform = '';
+
+            // Обновляем состояние игры
+            updateTableState();
+            gameState.initial_cards_placed = checkInitialCardsPlaced();
+            updateGameState();
+        }
+
+        function moveCardToHand(card) {
+            const hand = document.getElementById('hand');
+            hand.appendChild(card);
+            card.className = 'card';
+            card.style.position = '';
+            card.style.left = '';
+            card.style.top = '';
+            card.style.transform = '';
+            updateTableState();
+            updateGameState();
+        }
+
+        function handleCardDiscard(card) {
+            if (dealPhase === 0) {
+                alert('Нельзя сбрасывать карты во время начальной раздачи');
+                return;
+            }
+
+            const discardedArea = document.getElementById('discarded-cards');
+            discardedCards.push({
+                rank: card.dataset.rank,
+                suit: card.dataset.suit
+            });
+
+            const discardedCard = createCard({
+                rank: card.dataset.rank,
+                suit: card.dataset.suit
+            });
+            discardedCard.draggable = false;
+            discardedArea.appendChild(discardedCard);
+
+            card.remove();
+            updateGameState();
+        }
         function createCardSlot() {
             const slot = document.createElement('div');
             slot.className = 'card-slot';
 
-            slot.addEventListener('dragover', e => {
-                e.preventDefault();
-                if (dragCard && !slot.children.length) {
-                    slot.classList.add('drag-over');
-                }
-            });
-
-            slot.addEventListener('dragleave', () => {
-                slot.classList.remove('drag-over');
-            });
-
-            slot.addEventListener('drop', e => {
-                e.preventDefault();
-                slot.classList.remove('drag-over');
-                handleDrop(slot);
-            });
-
-            // Мобильные обработчики
-            slot.addEventListener('touchmove', e => e.preventDefault());
-            slot.addEventListener('touchend', e => {
-                if (dragCard) handleDrop(slot);
-            });
+            slot.addEventListener('dragover', handleDragOver);
+            slot.addEventListener('dragleave', handleDragLeave);
+            slot.addEventListener('drop', handleDrop);
 
             return slot;
         }
 
-        // Остальные функции
-        function setupTable() {
-            const rows = [
-                document.getElementById('ai-top-row'),
-                document.getElementById('ai-middle-row'),
-                document.getElementById('ai-bottom-row'),
-                document.getElementById('top-row'),
-                document.getElementById('middle-row'),
-                document.getElementById('bottom-row')
-            ];
+        function handleDragOver(e) {
+            e.preventDefault();
+            if (isDragging) {
+                e.target.classList.add('drag-over');
+            }
+        }
 
-            rows.forEach(row => {
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('drag-over');
+            const cardData = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const cardElement = document.querySelector(`.card[data-suit="${cardData.suit}"][data-rank="${cardData.rank}"]`);
+            handleCardDrop(e.target, cardElement);
+        }
+
+        function setupTable() {
+            const aiTopRow = document.getElementById('ai-top-row');
+            const aiMiddleRow = document.getElementById('ai-middle-row');
+            const aiBottomRow = document.getElementById('ai-bottom-row');
+            [aiTopRow, aiMiddleRow, aiBottomRow].forEach(row => {
                 row.innerHTML = '';
-                const slotCount = row.classList.contains('top') ? 3 : 5;
-                for (let i = 0; i < slotCount; i++) {
-                    row.appendChild(createCardSlot());
-                }
+                row.id = `ai-${row.className.split(' ')[1]}-row`;
+            });
+            for (let i = 0; i < 3; i++) aiTopRow.appendChild(createCardSlot());
+            for (let i = 0; i < 5; i++) aiMiddleRow.appendChild(createCardSlot());
+            for (let i = 0; i < 5; i++) aiBottomRow.appendChild(createCardSlot());
+
+            const topRow = document.getElementById('top-row');
+            const middleRow = document.getElementById('middle-row');
+            const bottomRow = document.getElementById('bottom-row');
+            [topRow, middleRow, bottomRow].forEach(row => {
+                row.innerHTML = '';
+                row.id = row.className.split(' ')[1] + '-row';
+            });
+            for (let i = 0; i < 3; i++) topRow.appendChild(createCardSlot());
+            for (let i = 0; i < 5; i++) middleRow.appendChild(createCardSlot());
+            for (let i = 0; i < 5; i++) bottomRow.appendChild(createCardSlot());
+
+            document.getElementById('discarded-cards').innerHTML = '';
+            discardedCards = [];
+        }
+
+        function updateTableState() {
+            gameState.table = {
+                top: Array.from(document.querySelectorAll('#top-row .card-slot')).map(slot =>
+                    slot.children[0] ? {
+                        rank: slot.children[0].dataset.rank,
+                        suit: slot.children[0].dataset.suit
+                    } : ''),
+                middle: Array.from(document.querySelectorAll('#middle-row .card-slot')).map(slot =>
+                    slot.children[0] ? {
+                        rank: slot.children[0].dataset.rank,
+                        suit: slot.children[0].dataset.suit
+                    } : ''),
+                bottom: Array.from(document.querySelectorAll('#bottom-row .card-slot')).map(slot =>
+                    slot.children[0] ? {
+                        rank: slot.children[0].dataset.rank,
+                        suit: slot.children[0].dataset.suit
+                    } : '')
+            };
+            // Обновляем карты в руке, удаляя те, которые были перемещены на стол
+            gameState.hand = gameState.hand.filter(card => {
+                return !isCardOnTable(card);
             });
         }
 
+        function isCardOnTable(card) {
+            for (const row in gameState.table) {
+                if (gameState.table[row].some(c => c.rank === card.rank && c.suit === card.suit)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkInitialCardsPlaced() {
+            const hand = document.getElementById('hand');
+            return dealPhase === 0 && hand.children.length === 0;
+        }
+
         async function startGame() {
+            dealPhase = 0;
+            const response = await fetch('/start');
+            const data = await response.json();
+
+            if (!data.cards || !Array.isArray(data.cards)) {
+                alert('Ошибка при раздаче карт');
+                return;
+            }
+
+            gameState = {
+                hand: data.cards,
+                table: {
+                    top: Array(3).fill(''),
+                    middle: Array(5).fill(''),
+                    bottom: Array(5).fill('')
+                },
+                used_cards: data.cards.map(card => `${card.rank}${card.suit}`),
+                draw_count: 0,
+                initial_cards_placed: false
+            };
+
             setupTable();
             const hand = document.getElementById('hand');
             hand.innerHTML = '';
-            // Загрузка карт с сервера
-            const response = await fetch('/start');
-            const data = await response.json();
-            data.cards.forEach(card => hand.appendChild(createCard(card)));
+            data.cards.forEach(card => {
+                const cardElement = createCard(card);
+                hand.appendChild(cardElement);
+            });
+
+            updateGameState();
         }
 
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', setupTable);
+        async function drawCards() {
+            if (dealPhase === 0 && !gameState.initial_cards_placed) {
+                alert('Сначала распределите начальные 5 карт!');
+                return;
+            }
+
+            if (dealPhase >= 4) {
+                alert('Все карты розданы!');
+                return;
+            }
+
+            const hand = document.getElementById('hand');
+            if (hand.children.length > 0) {
+                alert('Необходимо разместить или сбросить все карты перед новой раздачей!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/draw_cards');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                dealPhase++;
+                data.cards.forEach(card => {
+                    const cardElement = createCard(card);
+                    hand.appendChild(cardElement);
+                });
+
+                gameState.draw_count++;
+                // Добавляем новые карты в руку
+                gameState.hand.push(...data.cards);
+                updateGameState();
+            } catch (error) {
+                console.error('Ошибка при получении карт:', error);
+                alert('Произошла ошибка при получении карт. Пожалуйста, попробуйте еще раз.');
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTable();
+
+            const aiTimeSlider = document.getElementById('aiTime');
+            const aiTimeValue = document.getElementById('aiTimeValue');
+            aiTimeSlider.addEventListener('input', (e) => {
+                aiTimeValue.textContent = e.target.value;
+            });
+
+            const handElement = document.getElementById('hand');
+            handElement.addEventListener('dragover', handleDragOver);
+            handElement.addEventListener('drop', handleDrop);
+        });
     </script>
 </body>
 </html>
