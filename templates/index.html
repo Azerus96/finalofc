@@ -97,7 +97,7 @@
             bottom: 0;
             left: 0;
             right: 60px;
-            background: #ffffff;
+            background: transparent; /* Убираем белый фон */
             display: flex;
             flex-direction: row;
             justify-content: flex-start;
@@ -513,6 +513,8 @@
             const card = e.target;
             if (!card.classList.contains('card')) return;
 
+            e.preventDefault(); // Предотвращаем скроллинг страницы
+
             isDragging = true;
             const touch = e.touches[0];
             const offsetX = touch.clientX - card.getBoundingClientRect().left;
@@ -531,8 +533,9 @@
         }
 
         function handleTouchMove(e) {
-            e.preventDefault();
             if (!isDragging || !draggedCardInfo) return;
+
+            e.preventDefault(); // Предотвращаем скроллинг страницы
 
             const touch = e.touches[0];
             const cardElement = document.querySelector(`.card.dragging`);
@@ -569,7 +572,7 @@
             if (target && target.classList.contains('card-slot')) {
                 handleCardDrop(target, cardElement);
             } else if (target && target.id === 'hand') {
-                moveCardToHand(cardElement);
+                handleMoveCardInHand(cardElement, target);
             } else if (cardElement) {
                 // Возвращаем карту на исходную позицию, если она не была перемещена
                 cardElement.style.left = draggedCardInfo.originalX;
@@ -586,9 +589,26 @@
         function handleCardDrop(slot, card) {
             if (!slot || !card) return;
 
-            // Проверяем, не является ли слот уже занятым (только в начале раздачи)
+            // Если слот занят, меняем карты местами
             if (slot.children.length > 0 && dealPhase === 0) {
-                return;
+                const existingCard = slot.children[0];
+                const source = draggedCardInfo.source;
+
+                if (source.startsWith('top') || source.startsWith('middle') || source.startsWith('bottom')) {
+                    // Карта перемещается из другого слота на столе
+                    const sourceRow = document.getElementById(source);
+                    sourceRow.appendChild(existingCard);
+                } else if (source === 'hand') {
+                    // Карта перемещается из руки
+                    const hand = document.getElementById('hand');
+                    hand.appendChild(existingCard);
+                }
+
+                existingCard.className = 'card';
+                existingCard.style.position = '';
+                existingCard.style.left = '';
+                existingCard.style.top = '';
+                existingCard.style.transform = '';
             }
 
             // Помещаем карту в новый слот
@@ -602,6 +622,51 @@
             // Обновляем состояние игры
             updateTableState();
             gameState.initial_cards_placed = checkInitialCardsPlaced();
+            updateGameState();
+        }
+
+        function handleMoveCardInHand(draggedCard, target) {
+            const hand = document.getElementById('hand');
+            const cardsInHand = Array.from(hand.children);
+            const draggedCardIndex = cardsInHand.indexOf(draggedCard);
+
+            if (draggedCardIndex === -1) return;
+
+            // Находим ближайшую карту к месту, куда отпустили перетаскиваемую карту
+            let closestCardIndex = -1;
+            let minDistance = Infinity;
+
+            for (let i = 0; i < cardsInHand.length; i++) {
+                if (i === draggedCardIndex) continue;
+
+                const cardRect = cardsInHand[i].getBoundingClientRect();
+                const distance = Math.abs(cardRect.left + cardRect.width / 2 - (draggedCard.getBoundingClientRect().left + draggedCard.getBoundingClientRect().width / 2));
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestCardIndex = i;
+                }
+            }
+
+            // Вставляем карту перед ближайшей картой
+            if (closestCardIndex !== -1) {
+                if (closestCardIndex < draggedCardIndex) {
+                    hand.insertBefore(draggedCard, cardsInHand[closestCardIndex]);
+                } else {
+                    hand.insertBefore(draggedCard, cardsInHand[closestCardIndex].nextSibling);
+                }
+            } else {
+                // Если ближайшая карта не найдена, возвращаем карту на исходное место
+                hand.insertBefore(draggedCard, cardsInHand[draggedCardIndex]);
+            }
+
+            // Сбрасываем стили
+            draggedCard.style.position = '';
+            draggedCard.style.left = '';
+            draggedCard.style.top = '';
+            draggedCard.style.transform = '';
+
+            updateTableState();
             updateGameState();
         }
 
