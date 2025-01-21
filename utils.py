@@ -1,12 +1,23 @@
 import pickle
+import os
 
 def save_data(data, filename):
-    with open(filename, 'wb') as f:
-        pickle.dump(data, f)
+    """Saves data to a file using pickle."""
+    try:
+        with open(filename, 'wb') as f:
+            pickle.dump(data, f)
+        print(f"Data saved to {filename}")
+    except (pickle.PickleError, OSError) as e:
+        print(f"Error saving data to {filename}: {e}")
+
 
 def load_data(filename):
+    """Loads data from a file using pickle."""
     try:
         with open(filename, 'rb') as f:
-            return pickle.load(f)
-    except FileNotFoundError:
+            data = pickle.load(f)
+            print(f"Data loaded from {filename}")
+            return data
+    except (pickle.PickleError, OSError, EOFError) as e:
+        print(f"Error loading data from {filename}: {e}")
         return None
