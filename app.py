@@ -88,12 +88,11 @@ def update_state():
 def ai_move():
     global cfr_agent
     game_state_data = request.get_json()
-    print("Received game_state_data:", game_state_data)  # Логирование полученных данных
+    print("Received game_state_data:", game_state_data)
 
     num_cards = len(game_state_data['selected_cards'])
     ai_settings = game_state_data['ai_settings']
 
-    # Convert data from JSON to Card objects
     selected_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data['selected_cards']]
     board = ai_engine.Board()
     for line in ['top', 'middle', 'bottom']:
@@ -109,10 +108,8 @@ def ai_move():
         print(f"An unexpected error occurred: {e}")
         return jsonify({'error': str(e)}), 500
 
-    # Create GameState object
     game_state = ai_engine.GameState(selected_cards=selected_cards, board=board, discarded_cards=discarded_cards, ai_settings=ai_settings)
 
-    # Time limit for AI move
     timeout_event = Event()
     result = {}
 
@@ -125,10 +122,16 @@ def ai_move():
     thread = Thread(target=worker)
     thread.start()
     thread.join(timeout=float(ai_settings['aiTime']))
-    timeout_event.set()  # Set timeout event regardless of thread completion
+    timeout_event.set()
 
-    if 'move' not in result or 'error' in result['move']:
-        error_message = result['move'].get('error', 'Unknown error occurred during AI move')
+    # Проверка, успел ли поток завершиться
+    if thread.is_alive():
+        print("AI move timed out!")
+        return jsonify({'error': 'AI move timed out'}), 500
+
+    # Проверка на наличие результата и ошибок
+    if 'move' not in result or (result and 'error' in result.get('move', {})):
+        error_message = result.get('move', {}).get('error', 'Unknown error occurred during AI move')
         return jsonify({'error': error_message}), 500
 
     move = result['move']
