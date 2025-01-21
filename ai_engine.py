@@ -105,7 +105,7 @@ class GameState:
         self.board = board if board is not None else Board()
         self.discarded_cards = discarded_cards if discarded_cards is not None else []
         self.ai_settings = ai_settings if ai_settings is not None else {}
-        self.current_player = 0 # Assuming the AI is the only player in this implementation
+        self.current_player = 0  # Assuming the AI is the only player in this implementation
 
     def get_current_player(self):
         return self.current_player
@@ -342,7 +342,8 @@ class GameState:
 
     def get_fantasy_bonus(self):
         """Calculates the bonus for fantasy mode."""
-        # Implement the logic for fantasy mode bonus calculation
+        # Placeholder for fantasy mode bonus calculation
+        # TODO: Implement the actual logic for fantasy mode bonus calculation
         return 0
 
     def evaluate_hand(self, cards):
@@ -432,6 +433,7 @@ class GameState:
         ranks = [card.rank for card in cards]
         return any(ranks.count(r) == 2 for r in ranks)
 
+
 class CFRNode:
     def __init__(self, actions):
         self.regret_sum = defaultdict(float)
@@ -464,12 +466,17 @@ class CFRNode:
                 avg_strategy[a] = 1.0 / len(self.actions)
         return avg_strategy
 
+
 class CFRAgent:
-    def __init__(self):
+    def __init__(self, iterations=1000, stop_threshold=0.001):
         self.nodes = {}
-        self.iterations = 100 # Настроечный параметр
+        self.iterations = iterations
+        self.stop_threshold = stop_threshold
 
     def cfr(self, game_state, p0, p1, timeout_event, result):
+        if timeout_event.is_set():
+            return 0  # Return 0 if timeout occurred
+
         if game_state.is_terminal():
             return game_state.get_payoff()
 
@@ -477,7 +484,10 @@ class CFRAgent:
         info_set = game_state.get_information_set()
 
         if info_set not in self.nodes:
-            self.nodes[info_set] = CFRNode(game_state.get_actions())
+            actions = game_state.get_actions()
+            if not actions:
+                return 0 # Return 0 if no actions are available
+            self.nodes[info_set] = CFRNode(actions)
         node = self.nodes[info_set]
 
         strategy = node.get_strategy(p0 if player == 0 else p1)
@@ -501,8 +511,10 @@ class CFRAgent:
 
         return node_util
 
-    def train(self, iterations, timeout_event, result):
-        for _ in range(iterations):
+    def train(self, timeout_event, result):
+        for i in range(self.iterations):
+            if timeout_event.is_set():
+                break
             # Создание начального состояния игры
             all_cards = Card.get_all_cards()
             random.shuffle(all_cards)
@@ -516,56 +528,48 @@ class CFRAgent:
             # Запуск алгоритма CFR
             self.cfr(game_state, 1, 1, timeout_event, result)
 
-    def get_move_5(self, game_state, timeout_event, result):
-        # Логика для 5 карт
+            # Check for convergence every 100 iterations
+            if i % 100 == 0:
+                if self.check_convergence():
+                    print("CFR agent converged after", i, "iterations.")
+                    break
+
+
+    def check_convergence(self):
+        """Checks if the average strategy has converged."""
+        for node in self.nodes.values():
+            avg_strategy = node.get_average_strategy()
+            for action, prob in avg_strategy.items():
+                if abs(prob - 1.0 / len(node.actions)) > self.stop_threshold:
+                    return False
+        return True
+
+
+    def get_move(self, game_state, num_cards, timeout_event, result):
+        """Gets the AI's move for a given number of cards."""
+        actions = game_state.get_actions()
+        if not actions:
+            result['move'] = {'error': 'Нет доступных ходов'}
+            return
+
         best_move = None
         best_value = float('-inf')
 
-        for action in game_state.get_actions():
+        for action in actions:
             if timeout_event.is_set():
-                print("Timeout during get_move_5")
-                break
-            value = self.evaluate_move(game_state, action)
+                print("Timeout during get_move")
+                result['move'] = {'error': 'Превышено время ожидания хода ИИ'}
+                return
+            value = self.evaluate_move(game_state, action, timeout_event)
             if value > best_value:
                 best_value = value
                 best_move = action
 
         result['move'] = best_move
 
-    def get_move_3(self, game_state, timeout_event, result):
-        # Логика для 3 карт
-        best_move = None
-        best_value = float('-inf')
 
-        for action in game_state.get_actions():
-            if timeout_event.is_set():
-                print("Timeout during get_move_3")
-                break
-            value = self.evaluate_move(game_state, action)
-            if value > best_value:
-                best_value = value
-                best_move = action
-
-        result['move'] = best_move
-
-    def get_move_fantasy(self, game_state, timeout_event, result):
-        # Логика для режима "Фантазии"
-        best_move = None
-        best_value = float('-inf')
-
-        for action in game_state.get_actions():
-            if timeout_event.is_set():
-                print("Timeout during get_move_fantasy")
-                break
-            value = self.evaluate_move(game_state, action)
-            if value > best_value:
-                best_value = value
-                best_move = action
-
-        result['move'] = best_move
-
-    def evaluate_move(self, game_state, action):
-        """Оценивает ход, применяя его к текущему состоянию игры и возвращая ожидаемое значение."""
+    def evaluate_move(self, game_state, action, timeout_event):
+        """Evaluates a move by applying it to the current game state and returning the expected value."""
         next_state = game_state.apply_action(action)
         info_set = next_state.get_information_set()
 
@@ -574,44 +578,66 @@ class CFRAgent:
             strategy = node.get_average_strategy()
             expected_value = 0
             for a, prob in strategy.items():
-                # Здесь мы предполагаем, что у нас есть способ получить ценность действия
-                # Это может потребовать дальнейшей симуляции или оценки состояния
-                action_value = self.get_action_value(next_state, a)
+                action_value = self.get_action_value(next_state, a, timeout_event)
                 expected_value += prob * action_value
             return expected_value
         else:
-            # Если узел не найден, возвращаем базовую оценку
-            return self.baseline_evaluation(next_state)
+            # If the node is not found, perform a shallow search
+            return self.shallow_search(next_state, 2, timeout_event) # Search depth of 2
 
-    def get_action_value(self, state, action):
-        """Возвращает ценность действия в данном состоянии.
+    def shallow_search(self, state, depth, timeout_event):
+        if depth == 0 or state.is_terminal() or timeout_event.is_set():
+            return self.baseline_evaluation(state)
 
-        Это может быть эвристическая оценка или результат симуляции Монте-Карло.
-        """
-        # Простая эвристика: оцениваем по количеству очков, которое дает действие
-        next_state = state.apply_action(action)
-        if next_state.is_terminal():
-            return next_state.get_payoff()
-        else:
-            # Здесь может быть вызов симуляции Монте-Карло или другая эвристика
-            return self.baseline_evaluation(next_state)
+        best_value = float('-inf')
+        for action in state.get_actions():
+            value = -self.shallow_search(state.apply_action(action), depth - 1, timeout_event)
+            best_value = max(best_value, value)
+        return best_value
+
+
+    def get_action_value(self, state, action, timeout_event):
+        """Returns the value of an action in a given state using Monte Carlo simulation."""
+        num_simulations = 10  # Number of Monte Carlo simulations
+        total_score = 0
+
+        for _ in range(num_simulations):
+            if timeout_event.is_set():
+                break
+            simulated_state = state.apply_action(action)
+            while not simulated_state.is_terminal():
+                actions = simulated_state.get_actions()
+                if not actions:
+                    break
+                random_action = random.choice(actions)
+                simulated_state = simulated_state.apply_action(random_action)
+            total_score += self.baseline_evaluation(simulated_state)
+
+        return total_score / num_simulations if num_simulations > 0 else 0
+
 
     def baseline_evaluation(self, state):
-        """Базовая эвристическая оценка состояния игры."""
-        if state.is_terminal():
-            return state.get_payoff()
-        else:
-            # Простая эвристика: сумма очков за каждую линию
-            score = 0
-            score += state.get_line_score('top', state.board.top)
-            score += state.get_line_score('middle', state.board.middle)
-            score += state.get_line_score('bottom', state.board.bottom)
-            return score
+        """Baseline heuristic evaluation of the game state."""
+        if state.is_dead_hand():
+            return -1000 # Large negative penalty for dead hands
+
+        score = 0
+        score += state.get_line_score('top', state.board.top)
+        score += state.get_line_score('middle', state.board.middle)
+        score += state.get_line_score('bottom', state.board.bottom)
+
+        # Add some logic to favor better combinations on higher lines
+        score += sum(Card.RANKS.index(card.rank) for card in state.board.top) * 0.5
+        score += sum(Card.RANKS.index(card.rank) for card in state.board.middle) * 0.3
+        score += sum(Card.RANKS.index(card.rank) for card in state.board.bottom) * 0.2
+
+        return score
 
     def save_progress(self):
         data = {
             'nodes': self.nodes,
-            'iterations': self.iterations
+            'iterations': self.iterations,
+            'stop_threshold': self.stop_threshold
         }
         utils.save_data(data, 'cfr_data.pkl')
         github_utils.save_progress_to_github('cfr_data.pkl')
@@ -622,6 +648,8 @@ class CFRAgent:
         if data:
             self.nodes = data['nodes']
             self.iterations = data['iterations']
+            self.stop_threshold = data.get('stop_threshold', 0.001) # Default value if not present
 
-# Создание экземпляра агента
+
+# Creating an instance of the agent
 cfr_agent = CFRAgent()
