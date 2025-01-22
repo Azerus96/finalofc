@@ -546,7 +546,6 @@ class CFRAgent:
 
 
     def get_move(self, game_state, num_cards, timeout_event, result):
-        def get_move(self, game_state, num_cards, timeout_event, result):
         """Gets the AI's move for a given number of cards."""
         print("Inside get_move") # Отладочный print
         print("game_state.get_actions():", game_state.get_actions()) # Отладочный print
