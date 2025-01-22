@@ -1,6 +1,7 @@
 import random
 import itertools
 from collections import defaultdict
+from github import GithubException
 import github_utils
 import utils
 from threading import Thread, Event
@@ -26,6 +27,9 @@ class Card:
 
     def __hash__(self):
         return hash((self.rank, self.suit))
+
+    def to_dict(self):
+        return {'rank': self.rank, 'suit': self.suit}
 
     @staticmethod
     def get_all_cards():
