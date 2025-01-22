@@ -110,28 +110,16 @@ def ai_move():
 
     game_state = ai_engine.GameState(selected_cards=selected_cards, board=board, discarded_cards=discarded_cards, ai_settings=ai_settings)
 
-    timeout_event = Event()
+    # Отключаем многопоточность для отладки
     result = {}
+    cfr_agent.get_move(game_state, num_cards, Event(), result)  # Event() создает timeout_event, который всегда False
 
-    def worker():
-        try:
-            cfr_agent.get_move(game_state, num_cards, timeout_event, result)
-        except Exception as e:
-            result['move'] = {'error': str(e)}
 
-    thread = Thread(target=worker)
-    thread.start()
-    thread.join(timeout=float(ai_settings['aiTime']))
-    timeout_event.set()
+    print("Result after get_move:", result)
 
-    # Проверка, успел ли поток завершиться
-    if thread.is_alive():
-        print("AI move timed out!")
-        return jsonify({'error': 'AI move timed out'}), 500
-
-    # Проверка на наличие результата и ошибок
     if 'move' not in result or (result and 'error' in result.get('move', {})):
         error_message = result.get('move', {}).get('error', 'Unknown error occurred during AI move')
+        print(f"Error in ai_move: {error_message}")
         return jsonify({'error': error_message}), 500
 
     move = result['move']
