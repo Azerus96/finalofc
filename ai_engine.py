@@ -1,6 +1,7 @@
 import random
 import itertools
 from collections import defaultdict
+import github_utils
 import utils
 from threading import Thread, Event
 import time
@@ -545,36 +546,24 @@ class CFRAgent:
         return True
 
 
+    
     def get_move(self, game_state, num_cards, timeout_event, result):
         """Gets the AI's move for a given number of cards."""
-        print("Inside get_move") # Отладочный print
-        print("game_state.get_actions():", game_state.get_actions()) # Отладочный print
+        print("Inside get_move")
         actions = game_state.get_actions()
+        print("Actions:", actions)  # Добавлено для отладки
+
         if not actions:
             result['move'] = {'error': 'Нет доступных ходов'}
             return
 
-        best_move = None
-        best_value = float('-inf')
+        # Упрощение: выбираем случайный ход
+        best_move = random.choice(actions) if actions else None
 
-        for action in actions:
-            if timeout_event.is_set():
-                print("Timeout during get_move")
-                result['move'] = {'error': 'Превышено время ожидания хода ИИ'}
-                return
+        # Всегда устанавливаем result['move'], даже если best_move is None
+        result['move'] = best_move
 
-            try:
-                value = self.evaluate_move(game_state, action, timeout_event)
-            except Exception as e:
-                print(f"Error in evaluate_move within get_move: {e}")
-                result['move'] = {'error': str(e)}
-                return
-
-            if value > best_value:
-                best_value = value
-                best_move = action
-
-        result['move'] = best_move # Всегда устанавливаем result['move']
+        print("Result['move'] inside get_move:", result['move']) # Добавьте этот print для отладки
 
     def evaluate_move(self, game_state, action, timeout_event):
         try:
