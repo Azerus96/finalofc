@@ -546,7 +546,10 @@ class CFRAgent:
 
 
     def get_move(self, game_state, num_cards, timeout_event, result):
+        def get_move(self, game_state, num_cards, timeout_event, result):
         """Gets the AI's move for a given number of cards."""
+        print("Inside get_move") # Отладочный print
+        print("game_state.get_actions():", game_state.get_actions()) # Отладочный print
         actions = game_state.get_actions()
         if not actions:
             result['move'] = {'error': 'Нет доступных ходов'}
@@ -560,40 +563,58 @@ class CFRAgent:
                 print("Timeout during get_move")
                 result['move'] = {'error': 'Превышено время ожидания хода ИИ'}
                 return
-            value = self.evaluate_move(game_state, action, timeout_event)
+
+            try:
+                value = self.evaluate_move(game_state, action, timeout_event)
+            except Exception as e:
+                print(f"Error in evaluate_move within get_move: {e}")
+                result['move'] = {'error': str(e)}
+                return
+
             if value > best_value:
                 best_value = value
                 best_move = action
 
-        result['move'] = best_move
-
+        result['move'] = best_move # Всегда устанавливаем result['move']
 
     def evaluate_move(self, game_state, action, timeout_event):
-        """Evaluates a move by applying it to the current game state and returning the expected value."""
-        next_state = game_state.apply_action(action)
-        info_set = next_state.get_information_set()
+        try:
+            next_state = game_state.apply_action(action)
+            info_set = next_state.get_information_set()
 
-        if info_set in self.nodes:
-            node = self.nodes[info_set]
-            strategy = node.get_average_strategy()
-            expected_value = 0
-            for a, prob in strategy.items():
-                action_value = self.get_action_value(next_state, a, timeout_event)
-                expected_value += prob * action_value
-            return expected_value
-        else:
-            # If the node is not found, perform a shallow search
-            return self.shallow_search(next_state, 2, timeout_event) # Search depth of 2
+            if info_set in self.nodes:
+                node = self.nodes[info_set]
+                strategy = node.get_average_strategy()
+                expected_value = 0
+                for a, prob in strategy.items():
+                    try:
+                        action_value = self.get_action_value(next_state, a, timeout_event)
+                    except Exception as e:
+                        print(f"Error in get_action_value within evaluate_move: {e}")
+                        raise # Передаем исключение дальше
+                    expected_value += prob * action_value
+                return expected_value
+            else:
+                # If the node is not found, perform a shallow search
+                return self.shallow_search(next_state, 2, timeout_event) # Search depth of 2
+        except Exception as e:
+            print(f"Ошибка в evaluate_move: {e}")
+            raise # Передаем исключение дальше
+
 
     def shallow_search(self, state, depth, timeout_event):
-        if depth == 0 or state.is_terminal() or timeout_event.is_set():
-            return self.baseline_evaluation(state)
+        try:
+            if depth == 0 or state.is_terminal() or timeout_event.is_set():
+                return self.baseline_evaluation(state)
 
-        best_value = float('-inf')
-        for action in state.get_actions():
-            value = -self.shallow_search(state.apply_action(action), depth - 1, timeout_event)
-            best_value = max(best_value, value)
-        return best_value
+            best_value = float('-inf')
+            for action in state.get_actions():
+                value = -self.shallow_search(state.apply_action(action), depth - 1, timeout_event)
+                best_value = max(best_value, value)
+            return best_value
+        except Exception as e:
+            print(f"Ошибка в shallow_search: {e}")
+            raise # Передаем исключение дальше
 
 
     def get_action_value(self, state, action, timeout_event):
