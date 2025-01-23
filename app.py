@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, session, request
 import os
 import ai_engine
 import utils
-import github_utils  # Убедитесь, что этот модуль доступен
+import github_utils
 import time
 import json
 from threading import Thread, Event
@@ -81,45 +81,63 @@ def update_state():
 @app.route('/ai_move', methods=['POST'])
 def ai_move():
     global cfr_agent
+    if cfr_agent is None:  # Check if the agent is initialized
+        return jsonify({'error': 'AI agent not initialized'}), 500
+
     game_state_data = request.get_json()
     print("Received game_state_data:", game_state_data)
 
-    num_cards = len(game_state_data['selected_cards'])
-    ai_settings = game_state_data['ai_settings']
+    num_cards = len(game_state_data.get('selected_cards', []))  # Handle missing 'selected_cards'
+    ai_settings = game_state_data.get('ai_settings', {})  # Handle missing 'ai_settings'
 
-    selected_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data['selected_cards']]
+    try:
+        selected_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data['selected_cards']]
+    except (KeyError, TypeError) as e:
+        return jsonify({'error': f"Invalid selected_cards format: {e}"}), 400
+
     board = ai_engine.Board()
     for line in ['top', 'middle', 'bottom']:
         for card_data in game_state_data['board'].get(line, []):
-            board.place_card(line, ai_engine.Card(card_data['rank'], card_data['suit']))
+            try:
+                board.place_card(line, ai_engine.Card(card_data['rank'], card_data['suit']))
+            except (KeyError, TypeError) as e:
+                return jsonify({'error': f"Invalid board format: {e}"}), 400
+
     try:
-        discarded_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data['discarded_cards']]
-    except KeyError as e:
-        print(f"KeyError: {e} not found in game_state_data['discarded_cards']")
-        print("game_state_data['discarded_cards']:", game_state_data['discarded_cards'])
-        return jsonify({'error': f"KeyError: {e} not found in discarded_cards"}), 500
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return jsonify({'error': str(e)}), 500
+        discarded_cards = [ai_engine.Card(card['rank'], card['suit']) for card in game_state_data.get('discarded_cards', [])]
+    except (KeyError, TypeError) as e:
+        return jsonify({'error': f"Invalid discarded_cards format: {e}"}), 400
+
 
     game_state = ai_engine.GameState(selected_cards=selected_cards, board=board, discarded_cards=discarded_cards, ai_settings=ai_settings)
 
-    # Отключаем многопоточность для отладки
-    result = {}
-    cfr_agent.get_move(game_state, num_cards, Event(), result)
+    timeout_event = Event()
+    result = {'move': None}
 
-    print("Result after get_move:", result)
+    ai_thread = Thread(target=cfr_agent.get_move, args=(game_state, num_cards, timeout_event, result))
+    ai_thread.start()
 
-    if 'move' not in result or (result and 'error' in result.get('move', {})):
-        error_message = result.get('move', {}).get('error', 'Unknown error occurred during AI move')
+    ai_thread.join(timeout=int(ai_settings.get('aiTime', 5)))  # Default timeout of 5 seconds
+
+    if ai_thread.is_alive():
+        timeout_event.set()
+        ai_thread.join()
+        print("AI move timed out")
+        return jsonify({'error': 'Превышено время ожидания хода ИИ'})
+
+    if 'error' in result.get('move', {}):
+        error_message = result['move'].get('error', 'Unknown error occurred during AI move')
         print(f"Error in ai_move: {error_message}")
         return jsonify({'error': error_message}), 500
 
+
     move = result['move']
 
-    # Сериализуем move перед отправкой
+    # Сериализация move перед отправкой
     def serialize_card(card):
-        return card.to_dict()
+        if card is not None:
+            return card.to_dict()
+        return None
 
     def serialize_move(move):
         serialized_move = {}
@@ -132,20 +150,19 @@ def ai_move():
 
     serialized_move = serialize_move(move)
 
-
-    # Update game state in session (используем исходный move)
-    session['game_state']['board'] = {
-        'top': [card.to_dict() for card in move['top']],
-        'middle': [card.to_dict() for card in move['middle']],
-        'bottom': [card.to_dict() for card in move['bottom']]
-    }
-    if move.get('discarded'):
-        if isinstance(move.get('discarded'), list):
-            session['game_state']['discarded_cards'].extend([card.to_dict() for card in move['discarded']])
-        else:
-            session['game_state']['discarded_cards'].append(move['discarded'].to_dict())
-    session.modified = True
-
+    # Update game state in session
+    if move:
+        session['game_state']['board'] = {
+            'top': [serialize_card(card) for card in move.get('top', [])],
+            'middle': [serialize_card(card) for card in move.get('middle', [])],
+            'bottom': [serialize_card(card) for card in move.get('bottom', [])]
+        }
+        if move.get('discarded'):
+            if isinstance(move['discarded'], list):
+                session['game_state']['discarded_cards'].extend([serialize_card(card) for card in move['discarded']])
+            else:
+                session['game_state']['discarded_cards'].append(serialize_card(move['discarded']))
+        session.modified = True
 
     if cfr_agent.iterations % 100 == 0:
         try:
@@ -155,7 +172,6 @@ def ai_move():
             print(f"Error saving AI progress: {e}")
 
     return jsonify(serialized_move)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
