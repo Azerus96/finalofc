@@ -550,83 +550,178 @@ class CFRAgent:
         return True
 
 
-    
+
+class CFRNode:
+    def __init__(self, actions):
+        self.regret_sum = defaultdict(float)
+        self.strategy_sum = defaultdict(float)
+        self.actions = actions
+
+    def get_strategy(self, realization_weight):
+        normalizing_sum = 0
+        strategy = defaultdict(float)
+        for a in self.actions:
+            strategy[a] = self.regret_sum[a] if self.regret_sum[a] > 0 else 0
+            normalizing_sum += strategy[a]
+
+        for a in self.actions:
+            if normalizing_sum > 0:
+                strategy[a] /= normalizing_sum
+            else:
+                strategy[a] = 1.0 / len(self.actions)
+            self.strategy_sum[a] += realization_weight * strategy[a]
+        return strategy
+
+    def get_average_strategy(self):
+        avg_strategy = defaultdict(float)
+        normalizing_sum = sum(self.strategy_sum.values())
+        if normalizing_sum > 0:
+            for a in self.actions:
+                avg_strategy[a] = self.strategy_sum[a] / normalizing_sum
+        else:
+            for a in self.actions:
+                avg_strategy[a] = 1.0 / len(self.actions)
+        return avg_strategy
+
+
+class CFRAgent:
+    def __init__(self, iterations=1000, stop_threshold=0.001):
+        self.nodes = {}
+        self.iterations = iterations
+        self.stop_threshold = stop_threshold
+
+    def cfr(self, game_state, p0, p1, timeout_event, result):
+        if timeout_event.is_set():
+            print("CFR timed out!")
+            return 0
+
+        if game_state.is_terminal():
+            return game_state.get_payoff()
+
+        player = game_state.get_current_player()
+        info_set = game_state.get_information_set()
+
+        if info_set not in self.nodes:
+            actions = game_state.get_actions()
+            if not actions:
+                return 0
+            self.nodes[info_set] = CFRNode(actions)
+        node = self.nodes[info_set]
+
+        strategy = node.get_strategy(p0 if player == 0 else p1)
+        util = defaultdict(float)
+        node_util = 0
+
+        for a in node.actions:
+            if timeout_event.is_set():
+                print("CFR timed out during action loop!")
+                return 0
+
+            next_state = game_state.apply_action(a)
+            if player == 0:
+                util[a] = -self.cfr(next_state, p0 * strategy[a], p1, timeout_event, result)
+            else:
+                util[a] = -self.cfr(next_state, p0, p1 * strategy[a], timeout_event, result)
+            node_util += strategy[a] * util[a]
+
+        if player == 0:
+            for a in node.actions:
+                node.regret_sum[a] += p1 * (util[a] - node_util)
+        else:
+            for a in node.actions:
+                node.regret_sum[a] += p0 * (util[a] - node_util)
+
+        return node_util
+
+    def train(self, timeout_event, result):
+        for i in range(self.iterations):
+            if timeout_event.is_set():
+                print(f"Training interrupted after {i} iterations due to timeout.")
+                break  # Exit the loop if timeout is signaled
+
+            all_cards = Card.get_all_cards()
+            random.shuffle(all_cards)
+            game_state = GameState()
+            game_state.selected_cards = Hand(all_cards[:5])
+            self.cfr(game_state, 1, 1, timeout_event, result)
+
+            if (i + 1) % 100 == 0: # Check every 100 iterations
+                print(f"Iteration {i+1} of {self.iterations} complete.")
+                if self.check_convergence():
+                    print("CFR agent converged after", i + 1, "iterations.")
+                    break
+
+    def check_convergence(self):
+        for node in self.nodes.values():
+            avg_strategy = node.get_average_strategy()
+            for action, prob in avg_strategy.items():
+                if abs(prob - 1.0 / len(node.actions)) > self.stop_threshold:
+                    return False
+        return True
+
     def get_move(self, game_state, num_cards, timeout_event, result):
-        """Gets the AI's move for a given number of cards."""
         print("Inside get_move")
         actions = game_state.get_actions()
-        print("Actions:", actions)  # Добавлено для отладки
-
         if not actions:
             result['move'] = {'error': 'Нет доступных ходов'}
             return
 
-        # Упрощение: выбираем случайный ход
-        best_move = random.choice(actions) if actions else None
+        info_set = game_state.get_information_set()
+        if info_set in self.nodes:
+            strategy = self.nodes[info_set].get_average_strategy()
+            best_move = max(strategy, key=strategy.get) if strategy else None  # Choose the action with the highest probability
+        else:
+            best_move = random.choice(actions) if actions else None # Fallback to random if no strategy available
 
-        # Всегда устанавливаем result['move'], даже если best_move is None
         result['move'] = best_move
 
-        print("Result['move'] inside get_move:", result['move']) # Добавьте этот print для отладки
-
     def evaluate_move(self, game_state, action, timeout_event):
-        try:
-            next_state = game_state.apply_action(action)
-            info_set = next_state.get_information_set()
+        next_state = game_state.apply_action(action)
+        info_set = next_state.get_information_set()
 
-            if info_set in self.nodes:
-                node = self.nodes[info_set]
-                strategy = node.get_average_strategy()
-                expected_value = 0
-                for a, prob in strategy.items():
-                    try:
-                        action_value = self.get_action_value(next_state, a, timeout_event)
-                    except Exception as e:
-                        print(f"Error in get_action_value within evaluate_move: {e}")
-                        raise # Передаем исключение дальше
-                    expected_value += prob * action_value
-                return expected_value
-            else:
-                # If the node is not found, perform a shallow search
-                return self.shallow_search(next_state, 2, timeout_event) # Search depth of 2
-        except Exception as e:
-            print(f"Ошибка в evaluate_move: {e}")
-            raise # Передаем исключение дальше
-
+        if info_set in self.nodes:
+            node = self.nodes[info_set]
+            strategy = node.get_average_strategy()
+            expected_value = 0
+            for a, prob in strategy.items():
+                if timeout_event.is_set():
+                    return 0  # Return 0 if timeout occurred
+                expected_value += prob * self.get_action_value(next_state, a, timeout_event)
+            return expected_value
+        else:
+            return self.shallow_search(next_state, 2, timeout_event)
 
     def shallow_search(self, state, depth, timeout_event):
-        try:
-            if depth == 0 or state.is_terminal() or timeout_event.is_set():
-                return self.baseline_evaluation(state)
+        if depth == 0 or state.is_terminal() or timeout_event.is_set():
+            return self.baseline_evaluation(state)
 
-            best_value = float('-inf')
-            for action in state.get_actions():
-                value = -self.shallow_search(state.apply_action(action), depth - 1, timeout_event)
-                best_value = max(best_value, value)
-            return best_value
-        except Exception as e:
-            print(f"Ошибка в shallow_search: {e}")
-            raise # Передаем исключение дальше
-
+        best_value = float('-inf')
+        for action in state.get_actions():
+            if timeout_event.is_set():
+                return 0  # Return 0 if timeout occurred
+            value = -self.shallow_search(state.apply_action(action), depth - 1, timeout_event)
+            best_value = max(best_value, value)
+        return best_value
 
     def get_action_value(self, state, action, timeout_event):
-        """Returns the value of an action in a given state using Monte Carlo simulation."""
-        num_simulations = 10  # Number of Monte Carlo simulations
+        num_simulations = 10
         total_score = 0
 
         for _ in range(num_simulations):
             if timeout_event.is_set():
-                break
+                return 0  # Return 0 if timeout occurred
             simulated_state = state.apply_action(action)
             while not simulated_state.is_terminal():
                 actions = simulated_state.get_actions()
                 if not actions:
-                    break
+                    break  # No valid actions available
                 random_action = random.choice(actions)
                 simulated_state = simulated_state.apply_action(random_action)
             total_score += self.baseline_evaluation(simulated_state)
 
         return total_score / num_simulations if num_simulations > 0 else 0
+
+    
 
 
     def baseline_evaluation(self, state):
